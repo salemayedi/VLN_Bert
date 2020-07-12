@@ -9,6 +9,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from collections import deque
 
 #device = torch.device('cude') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -221,6 +222,21 @@ def _save_feature(self, file_name, feature, info):
     info["image_id"] = file_base_name
     info["features"] = feature.cpu().numpy()
     file_base_name = file_base_name + ".npy"
+
+def define_memory_buffer ():
+    memory_buffer = {'features' : deque(), 'infos' : deque() }
+    return memory_buffer
+
+def add_memory_buffer (memory_buffer, max_memory_buffer, features, infos):
+    if len(memory_buffer) < max_memory_buffer:
+        memory_buffer['features'].append(features)
+        memory_buffer['infos'].append(infos)
+    else:
+        memory_buffer['features'].append(features)
+        memory_buffer['features'].popleft()
+        memory_buffer['infos'].append(infos)
+        memory_buffer['features'].popleft()
+    return memory_buffer
 
 if __name__ == '__main__':
     ## Faster RCNN 
