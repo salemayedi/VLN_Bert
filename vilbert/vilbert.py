@@ -1257,6 +1257,16 @@ class BertImagePredictionHead(nn.Module):
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
+#Added layer for Action Grounding
+class ActionGrounding(nn.Module):
+    def __init__(self, config):
+        super(ActionGrounding, self).__init__()
+        self.map_representation = nn.Linear(config.hidden_size, 1)
+
+    def forward(self, h):
+        output = F.relu(self.map_representation(h))
+        return output
+
 
 class BertPreTrainedModel(PreTrainedModel):
     """ An abstract class to handle weights initialization and
@@ -1706,7 +1716,7 @@ class VILBertForVLTasks(BertPreTrainedModel):
             linguisic_logit,
             all_attention_mask,
 
-            # weadded these: embeddings output from VilBERT
+            # we added these: embeddings output from VilBERT
             sequence_output_t,
             sequence_output_v, 
             pooled_output_t, 
