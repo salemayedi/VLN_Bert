@@ -1257,15 +1257,6 @@ class BertImagePredictionHead(nn.Module):
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
-#Added layer for Action Grounding
-class ActionGrounding(nn.Module):
-    def __init__(self, config):
-        super(ActionGrounding, self).__init__()
-        self.map_representation = nn.Linear(config.hidden_size, 1)
-
-    def forward(self, h):
-        output = F.relu(self.map_representation(h))
-        return output
 
 
 class BertPreTrainedModel(PreTrainedModel):
@@ -1605,6 +1596,39 @@ class BertForMultiModalPreTraining(BertPreTrainedModel):
                 seq_relationship_score,
                 all_attention_mask,
             )
+#Added layer for Action Grounding
+class ActionGrounding(nn.Module):
+    def __init__(self, config, num_labels):
+        super(ActionGrounding, self).__init__()
+        self.vilBert = VILBertForVLTasks(config, num_labels)
+        self.map_representation = nn.Linear(config.hidden_size, config.size_vocab)
+
+    def forward(self
+        input_txt,
+        input_imgs,
+        image_loc,
+        token_type_ids=None,
+        attention_mask=None,
+        image_attention_mask=None,
+        co_attention_mask=None,
+        task_ids=None,
+        output_all_encoded_layers=False,
+        output_all_attention_masks=False):
+
+        _, _, _, _, _, _, _, _, _, _ ,sequence_output_t,_,_,_  = self.vilBert(input_txt,
+                        input_imgs,
+                        image_loc,
+                        token_type_ids=None,
+                        attention_mask=None,
+                        image_attention_mask=None,
+                        co_attention_mask=None,
+                        task_ids=None,
+                        output_all_encoded_layers=False,
+                        output_all_attention_masks=False)
+
+        output = F.relu(self.map_representation(sequence_output_t))
+
+        return output
 
 
 class VILBertForVLTasks(BertPreTrainedModel):

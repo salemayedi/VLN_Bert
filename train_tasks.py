@@ -296,6 +296,12 @@ def main():
             os.makedirs(savePath)
 
     config = BertConfig.from_json_file(args.config_file)
+    print("config: ", config)
+    print("task_lr: ", task_lr)
+    print("task_cfg:", task_cfg)
+    print("task_id: ", task_id)
+    print("task_name: ", task_names)
+    print("TimeStamp: ", timeStamp)
     if default_gpu:
         # save all the hidden parameters.
         with open(os.path.join(savePath, "command.txt"), "w") as f:
@@ -306,6 +312,7 @@ def main():
     task_batch_size, task_num_iters, task_ids, task_datasets_train, task_datasets_val, task_dataloader_train, task_dataloader_val = LoadDatasets(
         args, task_cfg, args.tasks.split("-")
     )
+    print("\n     here         \n")
 
     logdir = os.path.join(savePath, "logs")
     tbLogger = utils.tbLogger(
