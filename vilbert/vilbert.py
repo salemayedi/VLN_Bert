@@ -1464,7 +1464,8 @@ class VILBertActionGrounding(BertPreTrainedModel):
 
     def __init__(self, config):
         super(VILBertActionGrounding, self).__init__(config)
-        if config.track_temporal_features:
+        self.track_temporal_features = config.track_temporal_features
+        if self.track_temporal_features:
             self.positional_enc = nn.Linear(7, 2048)
         else:
             self.positional_enc = nn.Linear(6, 2048)
@@ -1511,8 +1512,9 @@ class VILBertActionGrounding(BertPreTrainedModel):
             image_target=None,
             next_sentence_label=None,
             output_all_attention_masks=False):
-        if self.mean_layer:
-            image_feat = self.img_emb_mean(image_feat)
+        if self.track_temporal_features:
+            if self.mean_layer:
+                image_feat = self.img_emb_mean(image_feat)
         image_feat = image_feat + self.positional_enc(image_pos_input)
         print("Image features after adding pos enc ->", image_feat.shape)
         sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
@@ -1545,7 +1547,8 @@ class VILBertActionSelection(BertPreTrainedModel):
 
     def __init__(self, config):
         super(VILBertActionSelection, self).__init__(config)
-        if config.track_temporal_features:
+        self.track_temporal_features = config.track_temporal_features
+        if self.track_temporal_features:
             self.positional_enc = nn.Linear(7, 2048)
         else:
             self.positional_enc = nn.Linear(6, 2048)
@@ -1555,7 +1558,7 @@ class VILBertActionSelection(BertPreTrainedModel):
         
         self.fusion_method = config.fusion_method
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        
+
         self.vil_prediction_action_selection = SimpleClassifier(
             config.bi_hidden_size, config.bi_hidden_size * 2, 13, 0.5
         )
@@ -1577,8 +1580,9 @@ class VILBertActionSelection(BertPreTrainedModel):
             image_target=None,
             next_sentence_label=None,
             output_all_attention_masks=False):
-        if self.mean_layer:
-            image_feat = self.img_emb_mean(image_feat)
+        if self.track_temporal_features:
+            if self.mean_layer:
+                image_feat = self.img_emb_mean(image_feat)
         image_feat = image_feat + self.positional_enc(image_pos_input)
         print("Image features after adding pos enc ->", image_feat.shape)
         _, _, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(

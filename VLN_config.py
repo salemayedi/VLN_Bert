@@ -35,6 +35,6 @@ config = SimpleNamespace(
         max_temporal_memory_buffer = 5,
         # track temporal features
         track_temporal_features = True, 
-        mean_layer = True # if true output feature extractor embedding [m * 2048];
+        mean_layer = False # if true output feature extractor embedding [m * 2048];
                         # if False  output feature extractor embedding [ 2048];
         )
