@@ -185,7 +185,6 @@ class BertConfig(object):
         visualization=False,
     ):
         """Constructs BertConfig.
-
         Args:
             vocab_size_or_config_json_file: Vocabulary size of `inputs_ids` in `BertModel`.
             hidden_size: Size of the encoder layers and the pooler layer.
@@ -1243,6 +1242,33 @@ class BertPreTrainingHeads(nn.Module):
         return prediction_scores_t, prediction_scores_v, seq_relationship_score
 
 
+class BertPreTrainingHeads(nn.Module):
+    def __init__(self, config, bert_model_embedding_weights):
+        super(BertPreTrainingHeads, self).__init__()
+        self.predictions = BertLMPredictionHead(config, bert_model_embedding_weights)
+        self.bi_seq_relationship = nn.Linear(config.bi_hidden_size, 2)
+        self.imagePredictions = BertImagePredictionHead(config)
+        self.fusion_method = config.fusion_method
+        self.dropout = nn.Dropout(0.1)
+
+    def forward(
+        self, sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v
+    ):
+
+        if self.fusion_method == "sum":
+            pooled_output = self.dropout(pooled_output_t + pooled_output_v)
+        elif self.fusion_method == "mul":
+            pooled_output = self.dropout(pooled_output_t * pooled_output_v)
+        else:
+            assert False
+
+        prediction_scores_t = self.predictions(sequence_output_t)
+        seq_relationship_score = self.bi_seq_relationship(pooled_output)
+        prediction_scores_v = self.imagePredictions(sequence_output_v)
+
+        return prediction_scores_t, prediction_scores_v, seq_relationship_score
+
+
 class BertImagePredictionHead(nn.Module):
     def __init__(self, config):
         super(BertImagePredictionHead, self).__init__()
@@ -1438,7 +1464,8 @@ class VILBertActionGrounding(BertPreTrainedModel):
 
     def __init__(self, config):
         super(VILBertActionGrounding, self).__init__(config)
-        if config.track_temporal_features:
+        self.track_temporal_features = config.track_temporal_features
+        if self.track_temporal_features:
             self.positional_enc = nn.Linear(7, 2048)
         else:
             self.positional_enc = nn.Linear(6, 2048)
@@ -1485,8 +1512,9 @@ class VILBertActionGrounding(BertPreTrainedModel):
             image_target=None,
             next_sentence_label=None,
             output_all_attention_masks=False):
-        if self.mean_layer:
-            image_feat = self.img_emb_mean(image_feat)
+        if self.track_temporal_features:
+            if self.mean_layer:
+                image_feat = self.img_emb_mean(image_feat)
         image_feat = image_feat + self.positional_enc(image_pos_input)
         print("Image features after adding pos enc ->", image_feat.shape)
         sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
@@ -1511,6 +1539,73 @@ class VILBertActionGrounding(BertPreTrainedModel):
             masked_img_loss = torch.sum(img_loss * (image_label == 1).unsqueeze(2).float()
                                         ) / max(torch.sum((image_label == 1)), 0)
         return masked_lm_loss, masked_img_loss, prediction_t, prediction_v, all_attention_mask
+
+
+class VILBertActionSelection(BertPreTrainedModel):
+    """Training vilbert to do the pretext task for predicting masked token.
+    """
+
+    def __init__(self, config):
+        super(VILBertActionSelection, self).__init__(config)
+        self.track_temporal_features = config.track_temporal_features
+        if self.track_temporal_features:
+            self.positional_enc = nn.Linear(7, 2048)
+        else:
+            self.positional_enc = nn.Linear(6, 2048)
+        self.mean_layer = config.mean_layer
+        self.img_emb_mean = nn.Linear(2048*config.max_temporal_memory_buffer, 2048)
+        self.bert = BertModel(config)
+        
+        self.fusion_method = config.fusion_method
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        self.vil_prediction_action_selection = SimpleClassifier(
+            config.bi_hidden_size, config.bi_hidden_size * 2, 13, 0.5
+        )
+
+        self.apply(self.init_weights)
+    
+
+    def forward(
+            self,
+            input_ids,
+            image_feat,
+            image_loc,
+            image_pos_input,
+            token_type_ids=None,
+            attention_mask=None,
+            image_attention_mask=None,
+            masked_lm_labels=None,
+            image_label=None,
+            image_target=None,
+            next_sentence_label=None,
+            output_all_attention_masks=False):
+        if self.track_temporal_features:
+            if self.mean_layer:
+                image_feat = self.img_emb_mean(image_feat)
+        image_feat = image_feat + self.positional_enc(image_pos_input)
+        print("Image features after adding pos enc ->", image_feat.shape)
+        _, _, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
+            input_ids,
+            image_feat,
+            image_loc,
+            token_type_ids,
+            attention_mask,
+            image_attention_mask,
+            output_all_encoded_layers=False,
+            output_all_attention_masks=output_all_attention_masks)
+        
+        if self.fusion_method == "sum":
+            pooled_output = self.dropout(pooled_output_t + pooled_output_v)
+        elif self.fusion_method == "mul":
+            pooled_output = self.dropout(pooled_output_t * pooled_output_v)
+        else:
+            assert False
+
+        prediction_vilbert_action = self.vil_prediction_action_selection(pooled_output)
+        
+        return prediction_vilbert_action, all_attention_mask
+
 
 
 class BertForMultiModalPreTraining(BertPreTrainedModel):
