@@ -77,7 +77,7 @@ def main():
         default="config/bert_base_6layer_6conect.json",
         help="The config file which specified the model details.",
     )
-    ## Other parameters
+    # Other parameters
     parser.add_argument(
         "--max_seq_length",
         default=36,
@@ -193,7 +193,9 @@ def main():
         help="whether use chunck for parallel training.",
     )
     parser.add_argument(
-        "--without_coattention", action="store_true", help="whether pair loss."
+        "--without_coattention",
+        action="store_true",
+        help="whether pair loss."
     )
     parser.add_argument(
         "--visual_target",
