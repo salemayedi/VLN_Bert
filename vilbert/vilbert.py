@@ -1537,7 +1537,7 @@ class VILBertActionGrounding(BertPreTrainedModel):
             img_loss = self.vis_criterion(F.log_softmax(prediction_v, dim=2), image_target)  # why dim 2 (to check)
             masked_img_loss = torch.sum(img_loss * (image_label == 1).unsqueeze(2).float()
                                         ) / max(torch.sum((image_label == 1)), 0)
-        return masked_lm_loss, masked_img_loss, prediction_t, prediction_v, all_attention_mask
+        return masked_lm_loss, masked_img_loss
 
 
 class BertForMultiModalPreTraining(BertPreTrainedModel):
