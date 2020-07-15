@@ -1261,7 +1261,7 @@ class BertPreTrainingHeads(nn.Module):
             pooled_output = self.dropout(pooled_output_t * pooled_output_v)
         else:
             assert False
-
+            
         prediction_scores_t = self.predictions(sequence_output_t)
         seq_relationship_score = self.bi_seq_relationship(pooled_output)
         prediction_scores_v = self.imagePredictions(sequence_output_v)
@@ -1515,12 +1515,12 @@ class VILBertActionGrounding(BertPreTrainedModel):
         if self.track_temporal_features:
             if self.mean_layer:
                 image_feat = self.img_emb_mean(image_feat)
-        image_feat = image_feat + self.positional_enc(image_pos_input)
+        image_feat = image_feat + self.positional_enc(image_pos_input.cuda())
         print("Image features after adding pos enc ->", image_feat.shape)
         sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
-            input_ids,
-            image_feat,
-            image_loc,
+            input_ids.cuda(),
+            image_feat.cuda(),
+            image_loc.cuda(),
             token_type_ids,
             attention_mask,
             image_attention_mask,
@@ -1528,7 +1528,8 @@ class VILBertActionGrounding(BertPreTrainedModel):
             output_all_attention_masks=output_all_attention_masks)
         prediction_t, prediction_v, _ = self.action_cls(
             sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v)
-
+        masked_img_loss = 9999
+        masked_lm_loss = 9999
         if (masked_lm_labels is not None):
             masked_lm_loss = self.lang_criterion(
                 prediction_t.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
