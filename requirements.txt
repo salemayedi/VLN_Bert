@@ -1,7 +1,6 @@
 pytorch-transformers==1.0.0
 numpy==1.16.4
 lmdb==0.94
-tensorboardX==1.2
 tensorflow==1.15.2
 tensorpack==0.9.4
 tqdm==4.31.1
@@ -15,3 +14,6 @@ python-prctl
 msgpack
 msgpack-numpy
 opencv-python==4.2.0.34
+scikit-image
+pickle-mixin
+tensorboardX
