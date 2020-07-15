@@ -1554,7 +1554,8 @@ class VILBertActionSelection(BertPreTrainedModel):
         self.bert = BertModel(config)
         
         self.fusion_method = config.fusion_method
-
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        
         self.vil_prediction_action_selection = SimpleClassifier(
             config.bi_hidden_size, config.bi_hidden_size * 2, 13, 0.5
         )
