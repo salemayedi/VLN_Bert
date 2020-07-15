@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 import sys
 from io import open
-from tensorpack.dataflow import image
 
 import torch
 from torch import nn
@@ -184,6 +183,7 @@ class BertConfig(object):
         task_specific_tokens=False,
         visualization=False,
     ):
+
         """Constructs BertConfig.
 
         Args:
@@ -1243,33 +1243,6 @@ class BertPreTrainingHeads(nn.Module):
         return prediction_scores_t, prediction_scores_v, seq_relationship_score
 
 
-class BertPreTrainingHeads(nn.Module):
-    def __init__(self, config, bert_model_embedding_weights):
-        super(BertPreTrainingHeads, self).__init__()
-        self.predictions = BertLMPredictionHead(config, bert_model_embedding_weights)
-        self.bi_seq_relationship = nn.Linear(config.bi_hidden_size, 2)
-        self.imagePredictions = BertImagePredictionHead(config)
-        self.fusion_method = config.fusion_method
-        self.dropout = nn.Dropout(0.1)
-
-    def forward(
-        self, sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v
-    ):
-
-        if self.fusion_method == "sum":
-            pooled_output = self.dropout(pooled_output_t + pooled_output_v)
-        elif self.fusion_method == "mul":
-            pooled_output = self.dropout(pooled_output_t * pooled_output_v)
-        else:
-            assert False
-
-        prediction_scores_t = self.predictions(sequence_output_t)
-        seq_relationship_score = self.bi_seq_relationship(pooled_output)
-        prediction_scores_v = self.imagePredictions(sequence_output_v)
-
-        return prediction_scores_t, prediction_scores_v, seq_relationship_score
-
-
 class BertImagePredictionHead(nn.Module):
     def __init__(self, config):
         super(BertImagePredictionHead, self).__init__()
@@ -1457,87 +1430,6 @@ class BertImageEmbeddings(nn.Module):
         embeddings = self.dropout(embeddings)
 
         return embeddings
-
-
-class VILBertActionGrounding(BertPreTrainedModel):
-    """Training vilbert to do the pretext task for predicting masked token.
-    """
-
-    def __init__(self, config):
-        super(VILBertActionGrounding, self).__init__(config)
-        if config.track_temporal_features:
-            self.positional_enc = nn.Linear(7, 2048)
-        else:
-            self.positional_enc = nn.Linear(6, 2048)
-        self.mean_layer = config.mean_layer
-        self.img_emb_mean = nn.Linear(2048*config.max_temporal_memory_buffer, 2048)
-        self.bert = BertModel(config)
-        self.action_cls = BertPreTrainingHeads(
-            config, self.bert.embeddings.word_embeddings.weight
-        )
-        self.apply(self.init_weights)
-        self.tie_weights()
-        self.lang_criterion = CrossEntropyLoss(ignore_index=-1)
-        self.vis_criterion = nn.KLDivLoss(reduction="none")
-
-    def tie_weights(self):
-        """ Make sure we are sharing the input and output embeddings.
-            Export to TorchScript can't handle parameter sharing so we are cloning them instead.
-        """
-        self._tie_or_clone_weights(
-            self.action_cls.predictions.decoder, self.bert.embeddings.word_embeddings
-        )
-
-    # def load_pretrained(self, state_dict):
-    #     # TODO: Check if from BertForMultiModalPreTraining.from_pretrained(...) is inherited from upper-class.
-    #     own_state = self.state_dict()
-    #     for name, param in state_dict.items():
-    #         if name not in own_state:
-    #             continue
-    #         if isinstance(param, torch.Parameter):
-    #             param = param.data
-    #         own_state[name].copy_(param)
-
-    def forward(
-            self,
-            input_ids,
-            image_feat,
-            image_loc,
-            image_pos_input,
-            token_type_ids=None,
-            attention_mask=None,
-            image_attention_mask=None,
-            masked_lm_labels=None,
-            image_label=None,
-            image_target=None,
-            next_sentence_label=None,
-            output_all_attention_masks=False):
-        if self.mean_layer:
-            image_feat = self.img_emb_mean(image_feat)
-        image_feat = image_feat + self.positional_enc(image_pos_input)
-        print("Image features after adding pos enc ->", image_feat.shape)
-        sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
-            input_ids,
-            image_feat,
-            image_loc,
-            token_type_ids,
-            attention_mask,
-            image_attention_mask,
-            output_all_encoded_layers=False,
-            output_all_attention_masks=output_all_attention_masks)
-        prediction_t, prediction_v, _ = self.action_cls(
-            sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v)
-
-        if (masked_lm_labels is not None):
-            masked_lm_loss = self.lang_criterion(
-                prediction_t.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-        if (image_target is not None):
-            prediction_v = prediction_v[:, 1:]  # Why?
-            # import pdb; pdb.set_trace()
-            img_loss = self.vis_criterion(F.log_softmax(prediction_v, dim=2), image_target)  # why dim 2 (to check)
-            masked_img_loss = torch.sum(img_loss * (image_label == 1).unsqueeze(2).float()
-                                        ) / max(torch.sum((image_label == 1)), 0)
-        return masked_lm_loss, masked_img_loss
 
 
 class BertForMultiModalPreTraining(BertPreTrainedModel):
@@ -1816,10 +1708,10 @@ class VILBertForVLTasks(BertPreTrainedModel):
 
             # weadded these: embeddings output from VilBERT
             sequence_output_t,
-            sequence_output_v,
-            pooled_output_t,
+            sequence_output_v, 
+            pooled_output_t, 
             pooled_output_v,
-            # all_attention_mask
+            #all_attention_mask
         )
 
 
