@@ -51,4 +51,5 @@ ENV/
 # VLN_Bert
 maskrcnn_benchmark_master/
 save/multitask_model/
-tools/refer/
+maskrcnn_benchmark_master/
+#tools/refer/
