@@ -12,7 +12,48 @@ import os
 from copy import deepcopy
 from collections import deque
 from sklearn.metrics.pairwise import cosine_similarity 
-from VLN_config import config
+#from VLN_config import config
+from types import SimpleNamespace
+config = SimpleNamespace(
+        from_pretrained="save/multitask_model/multi_task_model.bin",
+        bert_model="bert-base-uncased",
+        config_file="config/bert_base_6layer_6conect.json",
+        #max_seq_length=101,
+        train_batch_size=1,
+        do_lower_case=True,
+        predict_feature=False,
+        seed=42,
+        num_workers=0,
+        baseline=False,
+        img_weight=1,
+        distributed=False,
+        objective=1,
+        visual_target=0,
+        dynamic_attention=False,
+        task_specific_tokens=True,
+        tasks='1',
+        save_name='',
+        in_memory=False,
+        local_rank=-1,
+        split='mteval',
+        clean_train_sets=True,
+        gradient_accumulation_steps=1,
+        num_train_epochs=10.0,
+        start_epoch=0,
+        without_coattention=False,
+        learning_rate =1e-4,
+        adam_epsilon=1e-8,
+        warmup_proportion=0.1,
+        # feature extractor
+        threshold_similarity = 0.65,
+        best_features = 10,
+        max_temporal_memory_buffer = 5,
+        # track temporal features
+        track_temporal_features = False, 
+        mean_layer = True # if true output feature extractor embedding [m * 2048];
+                        # if False  output feature extractor embedding [ 2048];
+        )
+
 
 #device = torch.device('cude') if torch.cuda.is_available() else torch.device('cpu')
 class featureExtractor ():
@@ -270,11 +311,11 @@ class featureExtractor ():
             self.get_rpn_rois ()
             self.get_selected_rois () 
             # the output here : self.embedding_rois, self.boxes_on_image, self.labels, self.scores
-            #print('len self.embedding_rois: ', len(self.embedding_rois), 'shape first elt: ', self.embedding_rois[0].shape)
+            print('len self.embedding_rois: ', len(self.embedding_rois), 'shape first elt: ', self.embedding_rois[0].shape)
             # we add to the buffer the true last feature, without applying the mean or anytemporal transformation
-            #print("-----Before-----> ", self.temporal_memory_buffer["features"])
-            #print("-----New-----> ", self.embedding_rois[-1])
-            #print("-----After------> ", self.temporal_memory_buffer["features"])
+#             print("-----Before-----> ", self.temporal_memory_buffer["features"])
+#             print("-----New-----> ", self.embedding_rois[-1])
+#             print("-----After------> ", self.temporal_memory_buffer["features"])
             #if len(self.temporal_memory_buffer['features'])>1:
             if self.track_temporal_features:
                 cp_curr_emb = deepcopy(self.embedding_rois[-1])
