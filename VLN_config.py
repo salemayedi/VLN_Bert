@@ -32,7 +32,7 @@ config = SimpleNamespace(
         # feature extractor
         threshold_similarity = 0.7,
         best_features = 10,
-        max_temporal_memory_buffer = 5,
+        max_temporal_memory_buffer = 3, # the last pic is included, so you are basically only comparing to max_temporal_memory_buffer-1
         # track temporal features
         track_temporal_features = True, 
         mean_layer = True # if true output feature extractor embedding [m * 2048];

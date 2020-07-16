@@ -100,7 +100,6 @@ class featureExtractor ():
         '''
         list_similarities = []
         for other_box in other_image_boxes:
-            #import pdb; pdb.set_trace()
             list_similarities.append(self.bbox_iou(box, other_box))
         list_similarities = np.asarray(list_similarities)
 
@@ -120,7 +119,6 @@ class featureExtractor ():
         box_embedding have the shape of [2048]'''
         list_similarities = []
         for other_box_embedding in other_image_boxes_embeddings:
-            #import pdb; pdb.set_trace()
             list_similarities.append(self.similarity(box_embedding, other_box_embedding))
         list_similarities = np.asarray(list_similarities)
 
@@ -161,10 +159,17 @@ class featureExtractor ():
             self.embedding_rois.append(torch.cat((this_output,this_output), 1)) # if you want embedding : [nb box, 1024]
 
         for i in range (len(res)):
+            if (len (res[i]['boxes'])) >0:
+                curr_pos_enco = torch.cat((res[i]['boxes'][0] , torch.FloatTensor([0]), torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)
+                for j in range (1, len (res[i]['boxes'])):
+                    curr_pos_enco = torch.cat((curr_pos_enco, torch.cat((res[i]['boxes'][j] , torch.FloatTensor([j]), torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)), 0)
+                self.pos_enc.append(curr_pos_enco)
+            else:
+                self.pos_enc.append(res[i]['boxes'])
             self.boxes_on_image.append( res[i]['boxes'])
             self.labels.append( res[i]['labels'])
             self.scores.append (res[i]['scores'])
-        
+
     def get_selected_rois (self):
         '''Input tensors: all of them are list of tensors 
         labels[0] is tensors of the labels in image 0
@@ -180,13 +185,16 @@ class featureExtractor ():
             if len(self.embedding_rois[i]) >= self.best_features:
                 self.embedding_rois[i] = self.embedding_rois[i][:self.best_features]
                 self.boxes_on_image[i] = self.boxes_on_image[i][:self.best_features]
+                self.pos_enc[i] = self.pos_enc[i][:self.best_features]
                 self.labels[i] = self.labels[i][:self.best_features]
                 self.scores[i] = self.scores[i][:self.best_features]
 
     def get_temporal_feature(self):
+        # intialize pos encod Ti with the current number image,
+        self.pos_enc[-1] = torch.cat((self.pos_enc[-1], torch.ones(self.pos_enc[-1].shape[0],1)* self.im_nb), 1)
         for i in range (len(self.embedding_rois[-1])):
             ''' iterate over the boxes of the current image'''
-            print('box_id i: ', i, 'len memory' ,len(self.temporal_memory_buffer['features']))
+            #print('box_id i: ', i, 'len memory' ,len(self.temporal_memory_buffer['features']))
             curr_embedding_roi = self.embedding_rois[-1][i]# current box embedding
             curr_box = self.boxes_on_image[-1][i]
             #if len(curr_embedding_roi.shape) >1 : # it means that we are taking more than one image
@@ -198,10 +206,12 @@ class featureExtractor ():
                     all_curr_embedding_roi = torch.cat(( all_curr_embedding_roi[-1].reshape(1,-1), all_curr_embedding_roi), 0)
                 
             if len(self.temporal_memory_buffer['features']) != 1:
+                # intialize pos encod Ti with the current number image, and only change it when found similarity
+                #self.pos_enc[-1] = torch.cat((self.pos_enc[-1], torch.ones(self.pos_enc[-1].shape[0],1)* self.im_nb), 1)
                 ## NOT FIRST IMAGE
                 for j in range(len(self.temporal_memory_buffer['features']) -2 , -1 , -1):
                     # first value of j is len(tem_mem_buffer) - 2 and last one is 0
-                    print('j', j)
+                    #print('j', j)
                     ''' we iterate over the last images
                     we iterate over the indexes of self.temporal_memory_buffer because it is either equal 
                     to max_temporal_memory_buffer or less, it can not be more (verified when we add to the buffer)
@@ -211,15 +221,13 @@ class featureExtractor ():
 
                     if len(all_curr_embedding_roi.shape) >1 : # it means that we are taking more than one image  
                         curr_embedding_roi = all_curr_embedding_roi[-1] # we take the last image
-                    print('image from the past id j: ', j)
-                    #print(curr_embedding_roi.shape,self.temporal_memory_buffer['features'][-j].shape )
+                    #print('image from the past id j: ', j)
                     # we go backward in order to get the lastest image in the buffer
                     #bool_similarity, similar_embedding = self.get_best_smilar_box (curr_embedding_roi, \
                     #            self.temporal_memory_buffer['features'][j])
                     bool_similarity, similar_embedding = self.get_best_smilar_box (curr_box, \
                                 self.temporal_memory_buffer['boxes_on_image'][j], self.temporal_memory_buffer['features'][j])
                     
-                    #print(bool_similarity)
                     if bool_similarity == False:
                         if self.mean_layer == True:
                             break
@@ -228,35 +236,39 @@ class featureExtractor ():
                                 all_curr_embedding_roi = all_curr_embedding_roi.reshape(1,-1)
                             break
                     else:
+                        # we change last value (t initial) in the last positional encoding
+                        if len(self.temporal_memory_buffer['features']) < self.max_temporal_memory_buffer:
+                            self.pos_enc[-1][i][-1] = j + 1
+                        else:
+                            self.pos_enc[-1][i][-1] = float(self.im_nb) - self.max_temporal_memory_buffer + j +1
                         if self.mean_layer == True:
                             
-                            print('########found similarity, current embedding', all_curr_embedding_roi, 'similar to: ', similar_embedding)
+                            #print('########found similarity, current embedding', all_curr_embedding_roi, 'similar to: ', similar_embedding)
                             all_curr_embedding_roi[ - len(self.temporal_memory_buffer['features']) +j ] = similar_embedding.reshape(1,-1)
-                            print('after cat all_curr_embedding_roi', all_curr_embedding_roi)
+                            #print('after cat all_curr_embedding_roi', all_curr_embedding_roi)
                         else:
-                            print('########found similarity, current embedding', all_curr_embedding_roi, 'similar to: ', similar_embedding)
-                            #print(curr_embedding_roi.shape )
+                            #print('########found similarity, current embedding', all_curr_embedding_roi, 'similar to: ', similar_embedding)
                             if len(all_curr_embedding_roi.shape) < 2:
                                 all_curr_embedding_roi = all_curr_embedding_roi.reshape(1,-1)
                             similar_embedding = similar_embedding.reshape(1,-1)
                             all_curr_embedding_roi = torch.cat((similar_embedding, all_curr_embedding_roi), 0)
                 #else
                 if self.mean_layer == True: 
-                    #import pdb;pdb.set_trace()
                     if len(self.embedding_rois[-1].shape) < 3:
                         self.embedding_rois[-1] = self.embedding_rois[-1].unsqueeze(1) # nb_box, 1, 1024
                         for _ in range (self.max_temporal_memory_buffer-1):
                             self.embedding_rois[-1]= torch.cat((self.embedding_rois[-1][:,-1,:].unsqueeze(1), self.embedding_rois[-1]) , 1) # nb_box, m, 1024             
-                    print('shapes 3 : ', self.embedding_rois[-1][i].shape, self.embedding_rois[-1][i], all_curr_embedding_roi.shape, all_curr_embedding_roi)
+                    #print('shapes 3 : ', self.embedding_rois[-1][i].shape, self.embedding_rois[-1][i], all_curr_embedding_roi.shape, all_curr_embedding_roi)
                     self.embedding_rois[-1][i] = all_curr_embedding_roi
                 else:
-                    print('## before calculating thee mean for box id: ', i)
-                    print(all_curr_embedding_roi.shape, all_curr_embedding_roi)
+                    #print('## before calculating thee mean for box id: ', i)
+                    #print(all_curr_embedding_roi.shape, all_curr_embedding_roi)
                     self.embedding_rois[-1][i] = torch.mean (all_curr_embedding_roi, 0)
-                    print('## After calculating thee mean for box id: ', i)
-                    print(self.embedding_rois[-1][i].shape, self.embedding_rois[-1][i])
+                    #print('## After calculating thee mean for box id: ', i)
+                    #print(self.embedding_rois[-1][i].shape, self.embedding_rois[-1][i])
 
             elif len(self.temporal_memory_buffer['features']) == 1:
+                
                 # DEAL WITH FIRST IMAGE
                 if self.mean_layer == False:
                     pass
@@ -268,42 +280,44 @@ class featureExtractor ():
                             self.embedding_rois[-1]= torch.cat((self.embedding_rois[-1][:,-1,:].unsqueeze(1), self.embedding_rois[-1]) , 1) # nb_box, m, 1024             
                      # nb_box, m, 1024             
                     self.embedding_rois[-1][i] = all_curr_embedding_roi
-                    
-                    
-        #self.embedding_rois[-1] = self.embedding_rois[-1].view(self.embedding_rois[-1].shape[0], -1)
+
+        self.embedding_rois[-1] = self.embedding_rois[-1].view(self.embedding_rois[-1].shape[0], -1)
 
             
             
 
-    def process_feature_extraction(self, output, im_infos):
+    def process_feature_extraction(self):
         '''
         output = {
             'embedding_rois': rois,
             'bbox': boxes_on_image,
+            'pos_enc': pos_enc
             'labels': labels,
             'scores': scores
             }
         im_info = {"width": im_width, "height": im_height}
         '''
-        batch_size = len(output["embedding_rois"])
+        batch_size = len(self.output["embedding_rois"])
         feat_list = []
         info_list = []
+        pos_enc_list = []
 
         for i in range(batch_size):
-            feat_list.append(output['embedding_rois'][i])
-            #feat_list.append(torch.cat((output['embedding_rois'][i],output['embedding_rois'][i]), 1))
+            feat_list.append(self.output['embedding_rois'][i])
+            pos_enc_list.append(self.output['pos_enc'][i])
             info_list.append(
                 {
-                    "bbox": output['bbox'][i].cpu().numpy(),
-                    "num_boxes": len(output['bbox'][i]),
-                    "objects": output['labels'][i],
-                    "image_width": im_infos[i]["width"],
-                    "image_height": im_infos[i]["height"],
-                    "cls_prob": output['scores'][i].cpu().numpy(),
+                    "bbox": self.output['bbox'][i].cpu().numpy(),
+                    "pos_enc": self.output['pos_enc'][i].cpu().numpy(),
+                    "num_boxes": len(self.output['bbox'][i]),
+                    "objects": self.output['labels'][i],
+                    "image_width": self.im_infos[i]["width"],
+                    "image_height": self.im_infos[i]["height"],
+                    "cls_prob": self.output['scores'][i].cpu().numpy(),
                 }
             )
 
-        return feat_list, info_list
+        return feat_list, pos_enc_list, info_list
 
 
     def extract_features(self):
@@ -313,46 +327,39 @@ class featureExtractor ():
         self.im_infos = []
         self.embedding_rois = []
         self.boxes_on_image = []
+        self.pos_enc = [] # it contains bbox , rank of box, t_final_image, t_init_image (if you track time)
         self.labels = []
         self.scores = []
-        im_nb = 0
+        self.im_nb = -1
         for image_path in self.image_paths:
-            im_nb += 1
-            print('#############current image: ', im_nb, '#############')
+            self.im_nb += 1
+            #print('#############current image: ', self.im_nb, '#############')
             self.im, self.im_info = self.image_transform(image_path)
             self.im_infos.append(self.im_info)
             self.get_rpn_rois ()
             self.get_selected_rois () 
             # the output here : self.embedding_rois, self.boxes_on_image, self.labels, self.scores
-            #print('len self.embedding_rois: ', len(self.embedding_rois), 'shape first elt: ', self.embedding_rois[0].shape)
             # we add to the buffer the true last feature, without applying the mean or anytemporal transformation
-            #print("-----Before-----> ", self.temporal_memory_buffer["features"])
-            #print("-----New-----> ", self.embedding_rois[-1])
-            #print("-----After------> ", self.temporal_memory_buffer["features"])
             #if len(self.temporal_memory_buffer['features'])>1:
             if self.track_temporal_features:
                 cp_curr_emb = deepcopy(self.embedding_rois[-1])
                 cp_curr_box = deepcopy(self.boxes_on_image[-1])
                 self.add_temporal_memory_buffer(cp_curr_emb, cp_curr_box)  
                 self.get_temporal_feature()
-            print("-----len temp feature------> ", len(self.temporal_memory_buffer["features"]))
-            print("-----len temp boxes_on_image------> ", len(self.temporal_memory_buffer["boxes_on_image"]))
+            #print("-----len temp feature------> ", len(self.temporal_memory_buffer["features"]))
+            #print("-----len temp boxes_on_image------> ", len(self.temporal_memory_buffer["boxes_on_image"]))
             
 
-        output = {
+        self.output = {
             'embedding_rois': self.embedding_rois,
             'bbox': self.boxes_on_image,
+            'pos_enc': self.pos_enc,
             'labels': self.labels,
             'scores': self.scores
             }
 
-        features, infos = self.process_feature_extraction(
-            output,
-            self.im_infos,
-        )
-
-        import pdb;pdb.set_trace()
-        return features, infos
+        self.features_list, self.pos_enc_list,  self.infos_list = self.process_feature_extraction()
+        return self.features_list, self.pos_enc_list, self.infos_list
 
 
 
@@ -408,7 +415,7 @@ if __name__ == '__main__':
     # list image 
     pic = "test2.png"
     pic1 = "test.png"
-    image_paths = [pic, pic1, pic1, pic1, pic1, pic1]
+    image_paths = [pic, pic1, pic1, pic1, pic1, pic1,pic1]
     f_extractor = featureExtractor(image_paths, model)
-    features, infos = f_extractor.extract_features()
+    features, positional_encoding, infos = f_extractor.extract_features()
     import pdb; pdb.set_trace()
