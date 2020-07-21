@@ -53,3 +53,6 @@ maskrcnn_benchmark_master/
 save/multitask_model/
 maskrcnn_benchmark_master/
 #tools/refer/
+
+# Data src
+data_sample

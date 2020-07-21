@@ -1261,7 +1261,7 @@ class BertPreTrainingHeads(nn.Module):
             pooled_output = self.dropout(pooled_output_t * pooled_output_v)
         else:
             assert False
-            
+
         prediction_scores_t = self.predictions(sequence_output_t)
         seq_relationship_score = self.bi_seq_relationship(pooled_output)
         prediction_scores_v = self.imagePredictions(sequence_output_v)
@@ -1507,6 +1507,7 @@ class VILBertActionGrounding(BertPreTrainedModel):
             token_type_ids=None,
             attention_mask=None,
             image_attention_mask=None,
+            co_attention_mask=None,
             masked_lm_labels=None,
             image_label=None,
             image_target=None,
@@ -1515,14 +1516,14 @@ class VILBertActionGrounding(BertPreTrainedModel):
         if self.track_temporal_features:
             if self.mean_layer:
                 image_feat = self.img_emb_mean(image_feat)
-        image_feat = image_feat + self.positional_enc(image_pos_input.cuda())
-        print("Image features after adding pos enc ->", image_feat.shape)
+        image_feat = image_feat + self.positional_enc(image_pos_input)
         sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
-            input_ids.cuda(),
-            image_feat.cuda(),
-            image_loc.cuda(),
+            input_ids,
+            image_feat,
+            image_loc,
             token_type_ids,
             attention_mask,
+            co_attention_mask,
             image_attention_mask,
             output_all_encoded_layers=False,
             output_all_attention_masks=output_all_attention_masks)
@@ -1556,7 +1557,7 @@ class VILBertActionSelection(BertPreTrainedModel):
         self.mean_layer = config.mean_layer
         self.img_emb_mean = nn.Linear(2048*config.max_temporal_memory_buffer, 2048)
         self.bert = BertModel(config)
-        
+
         self.fusion_method = config.fusion_method
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -1565,7 +1566,6 @@ class VILBertActionSelection(BertPreTrainedModel):
         )
 
         self.apply(self.init_weights)
-    
 
     def forward(
             self,
@@ -1595,7 +1595,7 @@ class VILBertActionSelection(BertPreTrainedModel):
             image_attention_mask,
             output_all_encoded_layers=False,
             output_all_attention_masks=output_all_attention_masks)
-        
+
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
         elif self.fusion_method == "mul":
@@ -1604,9 +1604,8 @@ class VILBertActionSelection(BertPreTrainedModel):
             assert False
 
         prediction_vilbert_action = self.vil_prediction_action_selection(pooled_output)
-        
-        return prediction_vilbert_action, all_attention_mask
 
+        return prediction_vilbert_action, all_attention_mask
 
 
 class BertForMultiModalPreTraining(BertPreTrainedModel):
