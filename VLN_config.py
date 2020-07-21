@@ -35,9 +35,8 @@ config = SimpleNamespace(
     max_temporal_memory_buffer=3,  # the last pic is included, so you are basically only comparing to max_temporal_memory_buffer-1
     # track temporal features
     track_temporal_features=True,
-    mean_layer=True,
+    mean_layer=False,
                 # if true output feature extractor embedding [m * 2048];
                 # if False  output feature extractor embedding [ 2048];
-    num_key_frames=4,
-    num_boxes=10
+    num_key_frames=3,
 )
