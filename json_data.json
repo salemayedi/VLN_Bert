@@ -296,12 +296,6 @@
         ]
     },
     {
-        "imgs": [],
-        "desc": [
-            "<<STOP>>"
-        ]
-    },
-    {
         "imgs": [
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000910_804287/raw_images/000000000.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000910_804287/raw_images/000000001.png",
@@ -559,12 +553,6 @@
         ],
         "desc": [
             "put the ladle in the cabinet"
-        ]
-    },
-    {
-        "imgs": [],
-        "desc": [
-            "<<STOP>>"
         ]
     },
     {
@@ -861,12 +849,6 @@
         ],
         "desc": [
             "put the ladle in the cabinet"
-        ]
-    },
-    {
-        "imgs": [],
-        "desc": [
-            "<<STOP>>"
         ]
     }
 ]

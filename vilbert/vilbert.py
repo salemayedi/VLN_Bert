@@ -1478,7 +1478,7 @@ class VILBertActionGrounding(BertPreTrainedModel):
         self.apply(self.init_weights)
         self.tie_weights()
         self.lang_criterion = CrossEntropyLoss(ignore_index=-1)
-        self.vis_criterion = nn.KLDivLoss(reduction="none")
+        self.vis_criterion = CrossEntropyLoss(ignore_index=-1)
 
     def tie_weights(self):
         """ Make sure we are sharing the input and output embeddings.
@@ -1507,7 +1507,6 @@ class VILBertActionGrounding(BertPreTrainedModel):
             token_type_ids=None,
             attention_mask=None,
             image_attention_mask=None,
-            co_attention_mask=None,
             masked_lm_labels=None,
             image_label=None,
             image_target=None,
@@ -1523,24 +1522,23 @@ class VILBertActionGrounding(BertPreTrainedModel):
             image_loc,
             token_type_ids,
             attention_mask,
-            co_attention_mask,
             image_attention_mask,
             output_all_encoded_layers=False,
             output_all_attention_masks=output_all_attention_masks)
         prediction_t, prediction_v, _ = self.action_cls(
             sequence_output_t, sequence_output_v, pooled_output_t, pooled_output_v)
-        masked_img_loss = 9999
-        masked_lm_loss = 9999
-        if (masked_lm_labels is not None):
-            masked_lm_loss = self.lang_criterion(
-                prediction_t.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-        if (image_target is not None):
-            prediction_v = prediction_v[:, 1:]  # Why?
-            # import pdb; pdb.set_trace()
-            img_loss = self.vis_criterion(F.log_softmax(prediction_v, dim=2), image_target)  # why dim 2 (to check)
-            masked_img_loss = torch.sum(img_loss * (image_label == 1).unsqueeze(2).float()
-                                        ) / max(torch.sum((image_label == 1)), 0)
-        return masked_lm_loss, masked_img_loss, prediction_t, prediction_v, all_attention_mask
+        # masked_img_loss = 9999
+        # masked_lm_loss = 9999
+        # if (masked_lm_labels is not None):
+        #     masked_lm_loss = self.lang_criterion(
+        #         prediction_t.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
+        # if (image_target is not None):
+        #     prediction_v = prediction_v[:, 1:]  # Why?
+        #     # import pdb; pdb.set_trace()
+        #     img_loss = self.vis_criterion(F.log_softmax(prediction_v, dim=2), image_target)  # why dim 2 (to check)
+        #     masked_img_loss = torch.sum(img_loss * (image_label == 1).unsqueeze(2).float()
+        #                                 ) / max(torch.sum((image_label == 1)), 0)
+        return prediction_t, prediction_v, all_attention_mask
 
 
 class VILBertActionSelection(BertPreTrainedModel):
