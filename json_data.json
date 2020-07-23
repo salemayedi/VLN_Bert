@@ -820,35 +820,5 @@
         "desc": [
             "go to the cabinet"
         ]
-    },
-    {
-        "imgs": [
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000231.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000232.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000233.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000234.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000235.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000236.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000237.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000238.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000239.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000240.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000241.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000242.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000243.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000244.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000245.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000246.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000247.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000248.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000249.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000250.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000251.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000252.png",
-            "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000959_803111/raw_images/000000253.png"
-        ],
-        "desc": [
-            "put the ladle in the cabinet"
-        ]
     }
 ]
