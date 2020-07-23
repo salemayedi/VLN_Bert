@@ -5,7 +5,7 @@
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000001.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000002.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000003.png"
-            ],
+        ],
         "desc": [
             "go to the drawer"
         ]
@@ -16,7 +16,7 @@
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000037.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000038.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000039.png"
-            ],
+        ],
         "desc": [
             "pick up the ladle"
         ]
@@ -27,15 +27,9 @@
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000060.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000061.png",
             "data_sample/pick_clean_then_place_in_recep-Ladle-None-Cabinet-27/trial_T20200629_000839_938410/raw_images/000000062.png"
-            ],
+        ],
         "desc": [
             "go to the sink"
-        ]
-    },
-    {
-        "imgs": [],
-        "desc": [
-            "<<STOP>>"
         ]
     }
 ]
