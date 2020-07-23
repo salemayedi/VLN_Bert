@@ -106,7 +106,9 @@ for key, value in dict(model.named_parameters()).items():
 print('Vilbert Loaded successfully !')
 
 # Start Action Grounding
-model.cuda()
+print(torch.cuda.is_available())
+print(torch.cuda.get_device_name())
+model.cpu()
 model.train()
 optimizer = AdamW(model.parameters(),
                     lr=args.learning_rate,
@@ -118,20 +120,35 @@ loss_result_csv = pd.DataFrame(columns = ['epochs', 'train_loss', 'val_loss'])
 
 for epoch in range(100):
     i = 0
-    loss_train_cum = 0
-    while (i < data_train[0].shape[0]):
-        pred_t_train, pred_v_train, att_train = model(input_ids = masked_text_train[i:i+batch_size].cuda(),
-                                image_feat = features_masked_train[i:i+batch_size].cuda(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
-                                image_loc = spatial_train[i:i+batch_size].cuda(),  #Linear(in_features=5, out_features=1024, bias=True)
-                                image_pos_input = pos_enc_train[i:i+batch_size].cuda(),   #Linear(7, 2048)/(6, 2048)
-                                token_type_ids = segment_ids_train[i:i+batch_size].cuda(), 
-                                attention_mask = input_mask_train[i:i+batch_size].cuda(), 
-                                image_attention_mask = image_mask_train[i:i+batch_size].cuda(),
+    loss_train_cum = 0.
+    num_batches = data_train[0].shape[0]//batch_size+1
+
+    for i in range(num_batches):
+        if (i == num_batches -1):
+            r =  data_train[0].shape[0]%batch_size
+            pred_t_train, pred_v_train, att_train = model(input_ids = masked_text_train[data_train[0].shape[0]-batch_size:].cpu(),
+                                image_feat = features_masked_train[data_train[0].shape[0]-batch_size:].cpu(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
+                                image_loc = spatial_train[data_train[0].shape[0]-batch_size:].cpu(),  #Linear(in_features=5, out_features=1024, bias=True)
+                                image_pos_input = pos_enc_train[data_train[0].shape[0]-batch_size:].cpu(),   #Linear(7, 2048)/(6, 2048)
+                                token_type_ids = segment_ids_train[data_train[0].shape[0]-batch_size:].cpu(), 
+                                attention_mask = input_mask_train[data_train[0].shape[0]-batch_size:].cpu(), 
+                                image_attention_mask = image_mask_train[data_train[0].shape[0]-batch_size:].cpu(),
                                 output_all_attention_masks=True)
-        i = i+batch_size
+            masked_lm_loss_train = model.lang_criterion(pred_t_train.view(-1, 30522), masked_lm_token_train[data_train[0].shape[0]-batch_size:].cpu().view(-1))
+            img_loss_train = model.vis_criterion(pred_v_train.view(-1, 91), masked_img_labels_train[data_train[0].shape[0]-batch_size:].view(-1).cpu()) # why dim 2 (to check) 
+        else:
+            pred_t_train, pred_v_train, att_train = model(input_ids = masked_text_train[i*batch_size:(i+1)*batch_size].cpu(),
+                                image_feat = features_masked_train[i*batch_size:(i+1)*batch_size].cpu(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
+                                image_loc = spatial_train[i*batch_size:(i+1)*batch_size].cpu(),  #Linear(in_features=5, out_features=1024, bias=True)
+                                image_pos_input = pos_enc_train[i*batch_size:(i+1)*batch_size].cpu(),   #Linear(7, 2048)/(6, 2048)
+                                token_type_ids = segment_ids_train[i*batch_size:(i+1)*batch_size].cpu(), 
+                                attention_mask = input_mask_train[i*batch_size:(i+1)*batch_size].cpu(), 
+                                image_attention_mask = image_mask_train[i*batch_size:(i+1)*batch_size].cpu(),
+                                output_all_attention_masks=True)
+            masked_lm_loss_train = model.lang_criterion(pred_t_train.view(-1, 30522), masked_lm_token_train[i*batch_size:(i+1)*batch_size].cpu().view(-1))
+            img_loss_train = model.vis_criterion(pred_v_train.view(-1, 91), masked_img_labels_train[i*batch_size:(i+1)*batch_size].view(-1).cpu()) # why dim 2 (to check) 
+        
         optimizer.zero_grad()
-        masked_lm_loss_train = model.lang_criterion(pred_t_train.view(-1, 30522), masked_lm_token_train[i:i+batch_size].cuda().view(-1))
-        img_loss_train = model.vis_criterion(pred_v_train.view(-1, 91), masked_img_labels_train[i:i+batch_size].view(-1).cuda()) # why dim 2 (to check) 
         loss_train = masked_lm_loss_train + img_loss_train
         loss_train.backward()
         loss_train_cum += loss_train
@@ -139,22 +156,24 @@ for epoch in range(100):
     loss_train_cum = loss_train_cum/data_train[0].shape[0]
     print("epoch: " , epoch, " Train loss: ", loss_train_cum)
     # Validation
-    pred_t_val, pred_v_val, att_val = model(input_ids = masked_text_val.cuda(),
-                            image_feat = features_masked_val.cuda(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
-                            image_loc = spatial_val.cuda(),  #Linear(in_features=5, out_features=1024, bias=True)
-                            image_pos_input = pos_enc_val.cuda(),   #Linear(7, 2048)/(6, 2048)
-                            token_type_ids = segment_ids_val.cuda(), 
-                            attention_mask = input_mask_val.cuda(), 
-                            image_attention_mask = image_mask_val.cuda(),
+    pred_t_val, pred_v_val, att_val = model(input_ids = masked_text_val.cpu(),
+                            image_feat = features_masked_val.cpu(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
+                            image_loc = spatial_val.cpu(),  #Linear(in_features=5, out_features=1024, bias=True)
+                            image_pos_input = pos_enc_val.cpu(),   #Linear(7, 2048)/(6, 2048)
+                            token_type_ids = segment_ids_val.cpu(), 
+                            attention_mask = input_mask_val.cpu(), 
+                            image_attention_mask = image_mask_val.cpu(),
                             output_all_attention_masks=True)
     optimizer.zero_grad()
-    masked_lm_loss_val = model.lang_criterion(pred_t_val.view(-1, 30522), masked_lm_token_val.cuda().view(-1))
-    img_loss_val = model.vis_criterion(pred_v_val.view(-1, 91), masked_img_labels_val.view(-1).cuda()) # why dim 2 (to check) 
+    masked_lm_loss_val = model.lang_criterion(pred_t_val.view(-1, 30522), masked_lm_token_val.cpu().view(-1))
+    img_loss_val = model.vis_criterion(pred_v_val.view(-1, 91), masked_img_labels_val.view(-1).cpu()) # why dim 2 (to check) 
     loss_val = masked_lm_loss_val + img_loss_val
     loss_val = loss_val / data_val[0].shape[0]
     print("epoch: " , epoch," Val loss: ", loss_val)
-    loss_result_csv = loss_result_csv.append(pd.DataFrame(epoch, loss_train_cum, loss_val))
-    if i % 10 == 0:
+    #import pdb; pdb.set_trace()
+    loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)    
+    if epoch % 10 == 0:
         loss_result_csv.to_csv('epoch_loss.csv')
-        model.save_pretrained('vilbert_action_grounding.bin')
+        #model.save_pretrained('save_vilbert_action_grounding')
+        torch.save(model.state_dict(), "save_vilbert_action_grounding/vilberActionGrounding.pth")
 
