@@ -130,8 +130,8 @@ for epoch in range(100):
                                 output_all_attention_masks=True)
         i = i+batch_size
         optimizer.zero_grad()
-        masked_lm_loss_train = model.lang_criterion(pred_t_train.view(-1, 30522), masked_lm_token_train.cuda().view(-1))
-        img_loss_train = model.vis_criterion(pred_v_train.view(-1, 91), masked_img_labels_train.view(-1).cuda()) # why dim 2 (to check) 
+        masked_lm_loss_train = model.lang_criterion(pred_t_train.view(-1, 30522), masked_lm_token_train[i:i+batch_size].cuda().view(-1))
+        img_loss_train = model.vis_criterion(pred_v_train.view(-1, 91), masked_img_labels_train[i:i+batch_size].view(-1).cuda()) # why dim 2 (to check) 
         loss_train = masked_lm_loss_train + img_loss_train
         loss_train.backward()
         loss_train_cum += loss_train
