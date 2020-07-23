@@ -121,12 +121,12 @@ for epoch in range(100):
     loss_train_cum = 0
     while (i < data_train[0].shape[0]):
         pred_t_train, pred_v_train, att_train = model(input_ids = masked_text_train[i:i+batch_size].cuda(),
-                                image_feat = features_masked_train.cuda(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
-                                image_loc = spatial_train.cuda(),  #Linear(in_features=5, out_features=1024, bias=True)
-                                image_pos_input = pos_enc_train.cuda(),   #Linear(7, 2048)/(6, 2048)
-                                token_type_ids = segment_ids_train.cuda(), 
-                                attention_mask = input_mask_train.cuda(), 
-                                image_attention_mask = image_mask_train.cuda(),
+                                image_feat = features_masked_train[i:i+batch_size].cuda(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
+                                image_loc = spatial_train[i:i+batch_size].cuda(),  #Linear(in_features=5, out_features=1024, bias=True)
+                                image_pos_input = pos_enc_train[i:i+batch_size].cuda(),   #Linear(7, 2048)/(6, 2048)
+                                token_type_ids = segment_ids_train[i:i+batch_size].cuda(), 
+                                attention_mask = input_mask_train[i:i+batch_size].cuda(), 
+                                image_attention_mask = image_mask_train[i:i+batch_size].cuda(),
                                 output_all_attention_masks=True)
         i = i+batch_size
         optimizer.zero_grad()
@@ -156,5 +156,5 @@ for epoch in range(100):
     loss_result_csv = loss_result_csv.append(pd.DataFrame(epoch, loss_train_cum, loss_val))
     if i % 10 == 0:
         loss_result_csv.to_csv('epoch_loss.csv')
-        model.save_pretrained('vilber_action_grounding.bin')
+        model.save_pretrained('vilbert_action_grounding.bin')
 
