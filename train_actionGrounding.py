@@ -28,6 +28,7 @@ import pdb
 
 import torchvision.models as models
 import torchvision.transforms as transforms
+from torch.utils.tensorboard import SummaryWriter
 
 from faster_rcnn import feature_extractor_new as f_extractor
 from faster_rcnn.feature_extractor_new import featureExtractor
@@ -117,7 +118,7 @@ optimizer = AdamW(model.parameters(),
 
 batch_size = args.train_batch_size 
 loss_result_csv = pd.DataFrame(columns = ['epochs', 'train_loss', 'val_loss'])
-
+writer = SummaryWriter()
 for epoch in range(100):
     i = 0
     loss_train_cum = 0.
@@ -154,7 +155,7 @@ for epoch in range(100):
         loss_train_cum += loss_train
         optimizer.step()
     loss_train_cum = loss_train_cum/data_train[0].shape[0]
-    print("epoch: " , epoch, " Train loss: ", loss_train_cum)
+    #print("epoch: " , epoch, " Train loss: ", loss_train_cum)
     # Validation
     pred_t_val, pred_v_val, att_val = model(input_ids = masked_text_val.cpu(),
                             image_feat = features_masked_val.cpu(), # Linear(2048*config.max_temporal_memory_buffer, 2048)
@@ -169,11 +170,17 @@ for epoch in range(100):
     img_loss_val = model.vis_criterion(pred_v_val.view(-1, 91), masked_img_labels_val.view(-1).cpu()) # why dim 2 (to check) 
     loss_val = masked_lm_loss_val + img_loss_val
     loss_val = loss_val / data_val[0].shape[0]
-    print("epoch: " , epoch," Val loss: ", loss_val)
+    print("epoch: " , epoch,"Train loss: ", loss_train_cum, " Val loss: ", loss_val)
+
+    writer.add_scalar('Loss/train', loss_train_cum, epoch)
+    writer.add_scalar('Loss/validation', loss_val, epoch)
     #import pdb; pdb.set_trace()
     loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)    
     if epoch % 10 == 0:
-        loss_result_csv.to_csv('epoch_loss.csv')
+        loss_result_csv.to_csv('epoch_loss_2.csv')
         #model.save_pretrained('save_vilbert_action_grounding')
-        torch.save(model.state_dict(), "save_vilbert_action_grounding/vilberActionGrounding.pth")
+        torch.save(model.state_dict(), "save_vilbert_action_grounding/vilberActionGrounding_2.pth")
+        print("Model saved!")
+
+writer.close()
 
