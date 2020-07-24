@@ -83,7 +83,6 @@ data_train , data_val = split_train_val(data_loaded)
 (features_masked_val, pos_enc_val, spatial_val, image_mask_val, tokenized_text_val, masked_text_val,
      masked_lm_token_val, input_mask_val, 
     segment_ids_val, co_attention_mask_val, masked_img_labels_val)  = data_val
-
 # Call Vilbert
 config = BertConfig.from_json_file(args.config_file)
 bert_weight_name = json.load(
@@ -97,6 +96,7 @@ tokenizer = BertTokenizer.from_pretrained(
 config.track_temporal_features = args.track_temporal_features
 config.mean_layer = args.mean_layer
 config.max_temporal_memory_buffer = args.max_temporal_memory_buffer
+config.visualization = True
 
 model = VILBertActionGrounding.from_pretrained(
     args.from_pretrained, config=config, default_gpu=True
@@ -117,13 +117,15 @@ optimizer = AdamW(model.parameters(),
                     betas=(0.9, 0.98),)
 
 batch_size = args.train_batch_size 
+#args.use_tensorboard = True
 loss_result_csv = pd.DataFrame(columns = ['epochs', 'train_loss', 'val_loss'])
-writer = SummaryWriter()
-for epoch in range(100):
+if args.use_tensorboard:
+    writer = SummaryWriter()
+for epoch in range(30):
     i = 0
     loss_train_cum = 0.
     num_batches = data_train[0].shape[0]//batch_size+1
-
+    #import pdb; pdb.set_trace()
     for i in range(num_batches):
         if (i == num_batches -1):
             r =  data_train[0].shape[0]%batch_size
@@ -170,16 +172,16 @@ for epoch in range(100):
     img_loss_val = model.vis_criterion(pred_v_val.view(-1, 91), masked_img_labels_val.view(-1).cpu()) # why dim 2 (to check) 
     loss_val = masked_lm_loss_val + img_loss_val
     loss_val = loss_val / data_val[0].shape[0]
-    print("epoch: " , epoch,"Train loss: ", loss_train_cum, " Val loss: ", loss_val)
-
-    writer.add_scalar('Loss/train', loss_train_cum, epoch)
-    writer.add_scalar('Loss/validation', loss_val, epoch)
-    #import pdb; pdb.set_trace()
+    print("epoch: " , epoch,"Train loss: ", loss_train_cum.item(), " Val loss: ", loss_val.item())
+    if args.use_tensorboard:
+        #Plot separately the losses img and lm
+        writer.add_scalar('Loss/train', loss_train_cum, epoch)
+        writer.add_scalar('Loss/validation', loss_val, epoch)
     loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)    
     if epoch % 10 == 0:
-        loss_result_csv.to_csv('epoch_loss_2.csv')
+        #loss_result_csv.to_csv('epoch_loss_2.csv')
         #model.save_pretrained('save_vilbert_action_grounding')
-        torch.save(model.state_dict(), "save_vilbert_action_grounding/vilberActionGrounding_2.pth")
+        torch.save(model.state_dict(), "save_vilbert_action_grounding/vilberActionGrounding.bin")
         print("Model saved!")
 
 writer.close()
