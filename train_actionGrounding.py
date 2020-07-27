@@ -121,7 +121,7 @@ batch_size = args.train_batch_size
 loss_result_csv = pd.DataFrame(columns = ['epochs', 'train_loss', 'val_loss'])
 if args.use_tensorboard:
     writer = SummaryWriter()
-for epoch in range(30):
+for epoch in range(100):
     i = 0
     loss_train_cum = 0.
     num_batches = data_train[0].shape[0]//batch_size+1
@@ -137,6 +137,7 @@ for epoch in range(30):
                                 attention_mask = input_mask_train[data_train[0].shape[0]-batch_size:].cpu(), 
                                 image_attention_mask = image_mask_train[data_train[0].shape[0]-batch_size:].cpu(),
                                 output_all_attention_masks=True)
+       
             masked_lm_loss_train = model.lang_criterion(pred_t_train.view(-1, 30522), masked_lm_token_train[data_train[0].shape[0]-batch_size:].cpu().view(-1))
             img_loss_train = model.vis_criterion(pred_v_train.view(-1, 91), masked_img_labels_train[data_train[0].shape[0]-batch_size:].view(-1).cpu()) # why dim 2 (to check) 
         else:
