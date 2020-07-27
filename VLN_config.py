@@ -1,10 +1,11 @@
 from types import SimpleNamespace
 config = SimpleNamespace(
-    from_pretrained="save/multitask_model/multi_task_model.bin",
+    #from_pretrained="save/multitask_model/multi_task_model.bin",
+    from_pretrained = "save_vilbert_action_grounding/vilberActionGrounding.bin",
     bert_model="bert-base-uncased",
     config_file="config/bert_base_6layer_6conect.json",
     # max_seq_length=101,
-    train_batch_size=2,
+    train_batch_size=4,
     do_lower_case=True,
     predict_feature=False,
     seed=42,
@@ -39,4 +40,5 @@ config = SimpleNamespace(
                 # if true output feature extractor embedding [m * 2048];
                 # if False  output feature extractor embedding [ 2048];
     num_key_frames=6,
+    use_tensorboard = True,
 )
