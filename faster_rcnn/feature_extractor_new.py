@@ -13,7 +13,6 @@ from copy import deepcopy
 from collections import deque
 from sklearn.metrics.pairwise import cosine_similarity
 from VLN_config import config
-
 # device = torch.device('cude') if torch.cuda.is_available() else torch.device('cpu')
 
 
@@ -31,6 +30,7 @@ class featureExtractor ():
         self.mean_layer = config.mean_layer
         # or the embedding of the box has the shape of [max_temporal_memory_buffer, 2048]
         # if mean_layer == True
+        self.softmax = nn.Softmax(dim = 1)
 
     def image_transform(self, image_path):
         ''' read image from single image path, transfer it to tensor and get its
@@ -72,7 +72,7 @@ class featureExtractor ():
     def bbox_iou(self, box1, box2):
         '''
         Returns the IoU of two bounding boxes 
-        input box : x1, y1, x2, y2
+        input box : x1, y1, x2, y2, x`` between 0 and W, y is between 0 and H
         '''
         # Get the coordinates of bounding boxes
         b1_x1, b1_y1, b1_x2, b1_y2 = box1[0], box1[1], box1[2], box1[3]
@@ -132,11 +132,40 @@ class featureExtractor ():
         else:
             return True, similar_embedding
 
+    def no_boxes_embedding(self):
+        ''' In the case where do not find any box in the image, we use all the image as a box
+        and we should get its features, pos enc, labels, score and the box coordinates'''
+        outputs = []
+        self.model.eval()
+        with torch.no_grad():
+            hook = self.model.backbone.register_forward_hook(
+                lambda self, input, output: outputs.append(output)
+            )
+            res = self.model([self.im])
+            hook.remove()
+            box_all_image = torch.FloatTensor([0,0,self.im_info['width']-1 , \
+                        self.im_info['height']-1])
+
+            output_box_all_image= self.model.roi_heads.box_roi_pool(
+                outputs[0], [box_all_image.unsqueeze(0)], [i.shape[-2:] for i in self.im]
+            )
+            output_box_all_image = output_box_all_image.flatten(start_dim=1)
+            output_box_all_image = self.model.roi_heads.box_head.fc6(output_box_all_image)
+            self.embedding_rois.append(torch.cat((output_box_all_image, output_box_all_image), 1))
+            curr_pos_enco = torch.cat((box_all_image, torch.FloatTensor([0]),
+                                            torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)
+            self.pos_enc.append(curr_pos_enco)
+            self.boxes_on_image.append(box_all_image.unsqueeze(0))
+            self.labels.append(torch.FloatTensor([0.]))
+            self.scores.append(torch.FloatTensor([0.9]))
+
+
     def get_rpn_rois(self):
         '''This function returns the embedding of fc6 layer of the selected ROIS
         shape output is [nb regions, 1024]
-        input: self.im which is the current image tensor it has shape [3,w,h]
+        input: self.im which is the current image tensor it has shape [3,h,w]
         output tensors: selected_rois, boxes_on_image, labels, scores'''
+        no_boxes_in_the_image = False
         outputs = []
         self.model.eval()
         with torch.no_grad():
@@ -149,29 +178,38 @@ class featureExtractor ():
             # rpn_head (nn.Module): module that computes the objectness and regression deltas from the RPN
             # box_roi_pool (MultiScaleRoIAlign): the module which crops and resizes the feature maps in
             # the locations indicated by the bounding boxes (output of RPN)
-
             this_output = self.model.roi_heads.box_roi_pool(
                 outputs[0], [r['boxes'] for r in res], [i.shape[-2:] for i in self.im]
-            )
+            ) # the i is for the 3 channels of RGB
             this_output = this_output.flatten(start_dim=1)
             this_output = self.model.roi_heads.box_head.fc6(this_output)
+            output_cls = self.model.roi_heads.box_head.fc7(this_output)
+            output_cls = output_cls.flatten(start_dim=1)
+            output_cls = self.model.roi_heads.box_predictor.cls_score(output_cls)
+            #output_cls = self.softmax(output_cls)
             # self.embedding_rois.append(this_output) # if you want embedding :[nb box, 1024]
-            self.embedding_rois.append(torch.cat((this_output, this_output), 1)
-                                       )  # if you want embedding : [nb box, 1024]
-
-        for i in range(len(res)):
-            if (len(res[i]['boxes'])) > 0:
-                curr_pos_enco = torch.cat((res[i]['boxes'][0], torch.FloatTensor([0]),
-                                           torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)
-                for j in range(1, len(res[i]['boxes'])):
-                    curr_pos_enco = torch.cat((curr_pos_enco, torch.cat(
-                        (res[i]['boxes'][j], torch.FloatTensor([j]), torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)), 0)
-                self.pos_enc.append(curr_pos_enco)
+            if this_output.shape[0] == 0: # in case there are no boxes in the image
+                no_boxes_in_the_image = True
+                self.no_boxes_embedding()
             else:
-                self.pos_enc.append(res[i]['boxes'])
-            self.boxes_on_image.append(res[i]['boxes'])
-            self.labels.append(res[i]['labels'])
-            self.scores.append(res[i]['scores'])
+                self.embedding_rois.append(torch.cat((this_output, this_output), 1)
+                                        )  # if you want embedding : [nb box, 1024]
+                self.cls_probs.append(output_cls)
+        if no_boxes_in_the_image == False:    
+            for i in range(len(res)):
+                if (len(res[i]['boxes'])) > 0:
+                    curr_pos_enco = torch.cat((res[i]['boxes'][0], torch.FloatTensor([0]),
+                                            torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)
+                    for j in range(1, len(res[i]['boxes'])):
+                        curr_pos_enco = torch.cat((curr_pos_enco, torch.cat(
+                            (res[i]['boxes'][j], torch.FloatTensor([j]), torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)), 0)
+                    self.pos_enc.append(curr_pos_enco)
+                else:
+                    self.pos_enc.append(res[i]['boxes'])
+                self.boxes_on_image.append(res[i]['boxes'])
+                self.labels.append(res[i]['labels'])
+                self.scores.append(res[i]['scores'])
+        # to verify but ignore it for now#torch.argmax(self.cls_probs[0] , dim = 1) and self.labels[0]
 
     def get_selected_rois(self):
         '''Input tensors: all of them are list of tensors 
@@ -331,6 +369,7 @@ class featureExtractor ():
         '''
         image_paths: is a list of input image paths
         '''
+        self.cls_probs = []
         self.im_infos = []
         self.embedding_rois = []
         self.boxes_on_image = []
@@ -348,7 +387,7 @@ class featureExtractor ():
             # the output here : self.embedding_rois, self.boxes_on_image, self.labels, self.scores
             # we add to the buffer the true last feature, without applying the mean or anytemporal transformation
             # if len(self.temporal_memory_buffer['features'])>1:
-            if self.track_temporal_features:
+            if self.track_temporal_features == True:
                 cp_curr_emb = deepcopy(self.embedding_rois[-1])
                 cp_curr_box = deepcopy(self.boxes_on_image[-1])
                 self.add_temporal_memory_buffer(cp_curr_emb, cp_curr_box)
@@ -419,8 +458,10 @@ if __name__ == '__main__':
     # list image
     pic = "test2.png"
     pic1 = "test.png"
-    image_paths = [pic, pic1, pic1, pic1, pic1, pic1, pic1]
-    f_extractor = featureExtractor(image_paths, model)
+    pic_2 = "pickey.jpeg"
+    pic3 = "problem.png"
+    image_paths = [pic_2, pic3]
+    f_extractor = featureExtractor(image_paths, model, 1)
     features, positional_encoding, infos = f_extractor.extract_features()
     import pdb
     pdb.set_trace()
