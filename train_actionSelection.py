@@ -10,7 +10,7 @@ from VLN_config import config as args
 from torch.nn import CrossEntropyLoss
 import random
 import pandas as pd
-from dataLoaderActSelection import DataLoader
+from data.dataLoaderActSelection import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import sys
@@ -73,8 +73,8 @@ logger = logging.getLogger(__name__)
 
 # load data
 frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-data_loader = DataLoader("json_data.json", frcnn_model, save_or_not = False)
-path = 'DataLoaderActSelection.pt'
+data_loader = DataLoader("data/json_data.json", frcnn_model, save_or_not = False)
+path = 'data/DataLoaderActSelection.pt'
 data_loaded = data_loader.load_dataloader(path)
 print('data Loaded successfully !')
 
@@ -116,6 +116,7 @@ print("Exist Cuda: ", torch.cuda.is_available())
 print(torch.cuda.get_device_name())
 model.cpu()
 model.train()
+#Change adamW for action selection
 optimizer = AdamW(model.parameters(),
                     lr=args.learning_rate,
                     eps=args.adam_epsilon,
@@ -125,6 +126,8 @@ criterion = CrossEntropyLoss()
 batch_size = args.train_batch_size 
 if args.use_tensorboard:
     writer = SummaryWriter()
+best_train = 100000
+best_val = 1000000
 print("\n START !   \n")
 for epoch in range(args.epochs):
     i = 0
@@ -185,10 +188,13 @@ for epoch in range(args.epochs):
         writer.add_scalar('Loss/train', loss_train_cum, epoch)
         writer.add_scalar('Loss/validation', loss_val, epoch)
     #loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)    
-    if epoch % 10 == 0:
-        #loss_result_csv.to_csv('epoch_loss_2.csv')
-        #model.save_pretrained('save_vilbert_action_grounding')
-        torch.save(model.state_dict(), "save_vilbert_action_selection/vilberActionSelection.bin")
-        print("Model saved!")
+    if best_val > loss_val.item():
+        best_val = loss_val.item()
+        torch.save(model.state_dict(), "save_vilbert_action_selection/best_val_vilberActionSelection.bin")
+        print("Model saved best validation !")
+    if best_train > loss_train_cum.item() :
+        best_train = loss_train_cum.item()
+        torch.save(model.state_dict(), "save_vilbert_action_selection/best_train_vilberActionSelection.bin")
+        print("Model saved best Train !")
 
 writer.close()
