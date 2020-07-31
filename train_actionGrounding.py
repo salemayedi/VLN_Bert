@@ -9,7 +9,7 @@ import torch.distributed as dist
 from VLN_config import config as args
 import random
 import pandas as pd
-from dataLoader import DataLoader
+from data.dataLoader import DataLoader
 
 import sys
 import os
@@ -70,12 +70,12 @@ def split_train_val (data_loaded, split_portion = 0.9):
 
 # load data
 frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-data_loader = DataLoader("json_data.json", frcnn_model, save_or_not = False)
-path = 'DataLoader.pt'
+data_loader = DataLoader("data/json_data.json", frcnn_model, save_or_not = False)
+path = 'data/DataLoader.pt'
 data_loaded = data_loader.load_dataloader(path)
 print('data Loaded successfully !')
 # Split the data
-data_train , data_val = split_train_val(data_loaded)
+data_train , data_val = split_train_val(data_loaded, split_portion=0.9)
 (features_masked_train, pos_enc_train, spatial_train, image_mask_train, tokenized_text_train, masked_text_train,
      masked_lm_token_train, input_mask_train, 
     segment_ids_train, co_attention_mask_train, masked_img_labels_train)  = data_train
@@ -121,7 +121,10 @@ batch_size = args.train_batch_size
 loss_result_csv = pd.DataFrame(columns = ['epochs', 'train_loss', 'val_loss'])
 if args.use_tensorboard:
     writer = SummaryWriter()
-for epoch in range(100):
+best_train = 100000
+best_val = 1000000
+
+for epoch in range(1000):
     i = 0
     loss_train_cum = 0.
     num_batches = data_train[0].shape[0]//batch_size+1
@@ -179,11 +182,14 @@ for epoch in range(100):
         writer.add_scalar('Loss/train', loss_train_cum, epoch)
         writer.add_scalar('Loss/validation', loss_val, epoch)
     loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)    
-    if epoch % 10 == 0:
-        #loss_result_csv.to_csv('epoch_loss_2.csv')
-        #model.save_pretrained('save_vilbert_action_grounding')
-        torch.save(model.state_dict(), "save_vilbert_action_grounding/vilberActionGrounding.bin")
-        print("Model saved!")
+    if best_val > loss_val.item():
+        best_val = loss_val.item()
+        torch.save(model.state_dict(), "save_vilbert_action_grounding/best_val_vilberActionGrounding.bin")
+        print("Model saved best validation !")
+    if best_train > loss_train_cum.item() :
+        best_train = loss_train_cum.item()
+        torch.save(model.state_dict(), "save_vilbert_action_grounding/best_train_vilberActionGrounding.bin")
+        print("Model saved best Train !")
 
 writer.close()
 
