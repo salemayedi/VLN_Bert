@@ -43,23 +43,29 @@ class DataLoader():
         Input: data.json and model for the feature extractor (FastRCnn)
         Ouput: List of length = number of different instructions on our dataset. Each element of the list
                 is a dictionary containing a sequence of images + instruction (text), under the keys
-                [imgs] & [desc] respectively. [imgs] its a dictionary with keys [features], 
-                [pos_enco] and [infos], gathering the already masked and tokenized features extracted from 
-                the fasRCnn, a positional encoder of the bounding boxes and some additional information. 
+                [imgs] & [desc] respectively. [imgs] its a dictionary with keys [features],
+                [pos_enco] and [infos], gathering the already masked and tokenized features extracted from
+                the fasRCnn, a positional encoder of the bounding boxes and some additional information.
                 [desc] is a dictionary with keys [text_id],[modified_token] and [masked_lm_token], gathering
-                the tokenized instruction, the modification after making it and the masked_lm_token for VilBERT, 
+                the tokenized instruction, the modification after making it and the masked_lm_token for VilBERT,
                 respectively. """
 
-    def __init__(self, json_path, model, save_or_not=False):
+    def __init__(self, json_path, token_count, model, save_or_not=False):
         self.data = json.load(open(json_path, "r"))
+        self.dataset_token_count = json.load(open(token_count, "r"))
         print(len(self.data))
-        #assert False
+        # assert False
         self.tokenized_data = []
         self.model = model
         self.save_or_not = save_or_not
 
     def get_processed_data(self):
         return self.tokenized_data
+
+    def get_top_used_words(self, p):
+        top = self.dataset_token_count[:int(p*len(self.dataset_token_count))]
+        top = [tokenizer.convert_tokens_to_ids(a["token"]) for a in top]
+        return top
 
     def add_randomly_selected_box(self, features, positional_encoding, infos):
         i = np.random.randint(features.shape[0])
@@ -209,27 +215,51 @@ class DataLoader():
             type_modification = np.random.choice(np.array(["MASK", "random", "unaltered"]), p=[0.8, 0.1, 0.1])
             length_token = one_action_data["desc"]["len_original_text"] - 2
             num_masked_tokens = int(0.15*length_token)
+            top = self.get_top_used_words(0.9)
             if num_masked_tokens < 1:
                 num_masked_tokens = 1
 
             if type_modification == "MASK":
                 for i in range(num_masked_tokens):
-                    indx = np.random.randint(length_token)
+                    p = np.random.choice(np.array(["non_top", "all"]), p=[0.9, 0.1])
+                    if p == "non_top":
+                        indx = np.random.randint(length_token)
+                        while(modified_token[indx] in top):
+                            indx = np.random.randint(length_token)
+                    else:
+                        indx = np.random.randint(length_token)
+                    print(tokenizer.convert_ids_to_tokens(modified_token[indx+1]))
                     modified_token[indx+1] = tokenizer.encode('[MASK]')[0]
                     masked_lm_labels[indx+1] = one_action_data["desc"]["tokenized_text"][indx+1]
 
             elif type_modification == "random":
                 for i in range(num_masked_tokens):
-                    indx = np.random.randint(length_token)
+                    p = np.random.choice(np.array(["non_top", "all"]), p=[0.9, 0.1])
+                    if p == "non_top":
+                        indx = np.random.randint(length_token)
+                        while(modified_token[indx] in top):
+                            indx = np.random.randint(length_token)
+                    else:
+                        indx = np.random.randint(length_token)
+                    print(tokenizer.convert_ids_to_tokens(modified_token[indx+1]))
                     modified_token[indx+1] = np.random.randint(30522)
                     masked_lm_labels[indx+1] = one_action_data["desc"]["tokenized_text"][indx+1]
             else:
                 for i in range(num_masked_tokens):
-                    indx = np.random.randint(length_token)
+                    p = np.random.choice(np.array(["non_top", "all"]), p=[0.9, 0.1])
+                    if p == "non_top":
+                        indx = np.random.randint(length_token)
+                        while(modified_token[indx] in top):
+                            indx = np.random.randint(length_token)
+                    else:
+                        indx = np.random.randint(length_token)
+                    print(tokenizer.convert_ids_to_tokens(modified_token[indx+1]))
                     masked_lm_labels[indx+1] = one_action_data["desc"]["tokenized_text"][indx+1]
 
             one_action_data["desc"]["modified_token"] = modified_token
             one_action_data["desc"]["masked_lm_token"] = masked_lm_labels
+        import pdb
+        pdb.set_trace()
 
     def mask_img(self):
         """"We will mask the 15% of the patches features with 90% probability to zeroed features 
@@ -324,7 +354,7 @@ class DataLoader():
 
 if __name__ == '__main__':
     frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    data_loader = DataLoader("json_data_old.json", frcnn_model, save_or_not=True)
+    data_loader = DataLoader("short_json_data.json", "json_token_count.json", frcnn_model, save_or_not=False)
 
     # to save DataLoader result
     data = data_loader.get_data_masked_train()
