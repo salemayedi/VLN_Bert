@@ -32,7 +32,6 @@ MANIFEST
 .mypy_cache
 
 # Datasets and preprocessed files
-data/
 save/
 logs/
 results/
