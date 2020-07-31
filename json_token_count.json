@@ -1,0 +1,54 @@
+[
+    {
+        "token": "the",
+        "count": 21
+    },
+    {
+        "token": "go",
+        "count": 9
+    },
+    {
+        "token": "to",
+        "count": 9
+    },
+    {
+        "token": "ladle",
+        "count": 9
+    },
+    {
+        "token": "cabinet",
+        "count": 6
+    },
+    {
+        "token": "pick",
+        "count": 3
+    },
+    {
+        "token": "up",
+        "count": 3
+    },
+    {
+        "token": "sink",
+        "count": 3
+    },
+    {
+        "token": "wash",
+        "count": 3
+    },
+    {
+        "token": "put",
+        "count": 3
+    },
+    {
+        "token": "in",
+        "count": 3
+    },
+    {
+        "token": "countertop",
+        "count": 2
+    },
+    {
+        "token": "drawer",
+        "count": 1
+    }
+]
