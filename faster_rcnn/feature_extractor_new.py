@@ -156,7 +156,7 @@ class featureExtractor ():
                                             torch.FloatTensor([self.im_nb])), 0).unsqueeze(0)
             self.pos_enc.append(curr_pos_enco)
             self.boxes_on_image.append(box_all_image.unsqueeze(0))
-            self.labels.append(torch.FloatTensor([0.]))
+            self.labels.append(torch.LongTensor([0]))
             self.scores.append(torch.FloatTensor([0.9]))
 
 
