@@ -129,6 +129,9 @@ best_val = 1000000
 for epoch in range(args.epochs):
     i = 0
     loss_train_cum = 0.
+    loss_train_lm = 0.
+    loss_train_vis = 0.
+
     num_batches = data_train[0].shape[0]//batch_size+1
     #import pdb; pdb.set_trace()
     for i in range(num_batches):
@@ -179,11 +182,15 @@ for epoch in range(args.epochs):
                 pred_v_train.view(-1, 91), masked_img_labels_train[i*batch_size:(i+1)*batch_size].view(-1).cpu())  # why dim 2 (to check)
 
         optimizer.zero_grad()
+        loss_train_lm += masked_lm_loss_train
+        loss_train_vis += img_loss_train
         loss_train = masked_lm_loss_train + img_loss_train
         loss_train.backward()
         loss_train_cum += loss_train
         optimizer.step()
     loss_train_cum = loss_train_cum/data_train[0].shape[0]
+    loss_train_lm = loss_train_lm/data_train[0].shape[0]
+    loss_train_vis = loss_train_vis/data_train[0].shape[0]
     #print("epoch: " , epoch, " Train loss: ", loss_train_cum)
     # Validation
     pred_t_val, pred_v_val, att_val = model(input_ids=masked_text_val.cpu(),
@@ -205,6 +212,11 @@ for epoch in range(args.epochs):
         # Plot separately the losses img and lm
         writer.add_scalar('Loss/train', loss_train_cum, epoch)
         writer.add_scalar('Loss/validation', loss_val, epoch)
+        writer.add_scalar('Loss_lm/train', loss_train_lm, epoch)
+        writer.add_scalar('Loss_vis/train', loss_train_vis, epoch)
+        writer.add_scalar('Loss_lm/validation', masked_lm_loss_val, epoch)
+        writer.add_scalar('Loss_vis/validation', img_loss_val, epoch)
+
     loss_result_csv = loss_result_csv.append(pd.DataFrame(
         [[epoch, loss_train_cum.item(), loss_val.item()]], columns=loss_result_csv.columns), ignore_index=True)
     if best_val > loss_val.item():
