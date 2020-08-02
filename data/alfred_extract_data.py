@@ -31,8 +31,8 @@ class DataExtractor():
             json_file = os.path.join(traj,  "traj_data.json")
             with open(json_file) as f:
                 data = json.load(f)
-            num_high_idx = len(data["template"]["high_descs"])
-            # num_high_idx = len(data["turk_annotations"]["anns"][0]["high_descs"])
+            # num_high_idx = len(data["template"]["high_descs"])
+            num_high_idx = len(data["turk_annotations"]["anns"][0]["high_descs"])
             desc = {}    # high_idx : [img]
             imgs = {}    # high_idx : [desc]
             seq_actions = {}  # high idx : action
@@ -60,8 +60,8 @@ class DataExtractor():
                                                                           if img["high_idx"] == i and img["low_idx"] == action["low_idx"]]}
                                   for action in seq_actions[i]]
 
-                desc[i] = [data["template"]["high_descs"][i]]
-                # desc[i] = [desc["high_descs"][i] for desc in data["turk_annotations"]["anns"]]
+                # desc[i] = [data["template"]["high_descs"][i]]
+                desc[i] = [desc["high_descs"][i] for desc in data["turk_annotations"]["anns"]]
 
             # appending the extracted data
             for i in range(num_high_idx):
@@ -91,5 +91,5 @@ class DataExtractor():
 
 
 if __name__ == '__main__':
-    data_ext = DataExtractor("data_sample")
+    data_ext = DataExtractor("test_data")
     data_ext.build_json()
