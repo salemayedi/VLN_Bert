@@ -1,20 +1,9 @@
-import logging
-import json
-import torch
-from types import SimpleNamespace
-from vilbert.vilbert import VILBertActionGrounding, BertConfig
-from pytorch_transformers.tokenization_bert import BertTokenizer
-from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
-import torch.distributed as dist
-from VLN_config import config as args
-import random
-import pandas as pd
-
-
 import sys
 import os
 import torch
 import yaml
+
+sys.path.insert(0, "/home/mikel/Desktop/Computer Science Master/LAB/Project/VLN_Bert")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,6 +21,18 @@ import torchvision.transforms as transforms
 from faster_rcnn import feature_extractor_new as f_extractor
 from faster_rcnn.feature_extractor_new import featureExtractor
 
+from copy import deepcopy
+import logging
+import json
+import torch
+from types import SimpleNamespace
+from vilbert.vilbert import VILBertActionGrounding, BertConfig
+from pytorch_transformers.tokenization_bert import BertTokenizer
+from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
+import torch.distributed as dist
+from VLN_config import config as args
+import random
+import pandas as pd
 
 tokenizer = BertTokenizer.from_pretrained(
     args.bert_model, do_lower_case=args.do_lower_case
@@ -102,7 +103,7 @@ class DataLoader():
             frames_per_clip = args.clip_size
             num_clips = np.ceil(len_seq/frames_per_clip).astype(int)
             for c in range(num_clips):
-                if c < (args.num_clips-1):
+                if c < (num_clips-1):
                     print("Clip from %d -> %d with %d" % (c*frames_per_clip, (c+1)*frames_per_clip, frames_per_clip))
                     clip = one_action_data["imgs"][c*frames_per_clip:(c+1)*frames_per_clip]
                 else:
@@ -145,7 +146,7 @@ class DataLoader():
                 # Flatten to one img so that, we have r_0..r_k*nboxes as if it was one image
                 # To be applied for the 3 lists above
                 features, positional_encoding, infos = self.flatten_to_one_img(features, positional_encoding, infos)
-                if c == args.num_clips-1:
+                if c == num_clips-1:
                     action = one_action_data["img_action"][-1]["action"]
                 else:
                     action = one_action_data["img_action"][(c+1)*frames_per_clip]["action"]
@@ -337,6 +338,6 @@ class DataLoader():
 
 if __name__ == '__main__':
     frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    data_loader = DataLoader("short_json_data.json", frcnn_model, save_or_not=False)
+    data_loader = DataLoader("json_data.json", frcnn_model, save_or_not=False)
     # to save DataLoader result
     data = data_loader.get_data_masked_train()

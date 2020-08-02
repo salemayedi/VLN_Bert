@@ -119,10 +119,11 @@ print(torch.cuda.get_device_name())
 model.cpu()
 model.train()
 # Change adamW for action selection
-optimizer = AdamW(model.parameters(),
-                  lr=args.learning_rate,
-                  eps=args.adam_epsilon,
-                  betas=(0.9, 0.98),)
+optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+# optimizer = AdamW(model.parameters(),
+#                   lr=args.learning_rate,
+#                   eps=args.adam_epsilon,
+#                   betas=(0.9, 0.98),)
 criterion = CrossEntropyLoss()
 
 batch_size = args.train_batch_size
