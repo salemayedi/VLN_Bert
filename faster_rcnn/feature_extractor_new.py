@@ -38,6 +38,11 @@ class featureExtractor ():
         to_tensor = transforms.ToTensor()
         # img = Image.open(pic)
         im = cv2.imread(image_path)  # Read image with cv2
+        if im is None:
+            image_path = image_path[:-4] + ".png"
+            im = cv2.imread(image_path)  # Read image with cv2
+            if im is None:
+                print("PATH NOT FOUND!", image_path)
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)  # Convert to RGB
         # t_img = to_tensor(img).float() # convert to tensor
         im_shape = im.shape

@@ -51,7 +51,7 @@ class DataLoader():
                 respectively. """
 
     def __init__(self, json_path, token_count, model, save_or_not=False):
-        self.data = json.load(open(json_path, "r"))
+        self.data = json.load(open(json_path, "r"))[:120]
         self.dataset_token_count = json.load(open(token_count, "r"))
         print(len(self.data))
         # assert False
@@ -258,8 +258,7 @@ class DataLoader():
 
             one_action_data["desc"]["modified_token"] = modified_token
             one_action_data["desc"]["masked_lm_token"] = masked_lm_labels
-        import pdb
-        pdb.set_trace()
+
 
     def mask_img(self):
         """"We will mask the 15% of the patches features with 90% probability to zeroed features 
@@ -323,8 +322,6 @@ class DataLoader():
         self.img_tokenizer()
         self.text_tokenizer()
         self.mask_text()
-        import pdb
-        pdb.set_trace()
         self.mask_img()
         data = self.get_processed_data()
         for instruction, data_point in enumerate(data):
@@ -354,7 +351,7 @@ class DataLoader():
 
 if __name__ == '__main__':
     frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    data_loader = DataLoader("short_json_data.json", "json_token_count.json", frcnn_model, save_or_not=True)
+    data_loader = DataLoader("json_data.json", "json_token_count.json", frcnn_model, save_or_not=True)
 
     # to save DataLoader result
     data = data_loader.get_data_masked_train()

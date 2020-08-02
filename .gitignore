@@ -36,6 +36,7 @@ save/
 logs/
 results/
 
+
 # Checkpoints directory
 checkpoints/
 
@@ -55,3 +56,12 @@ maskrcnn_benchmark_master/
 
 # Data src
 data_sample
+json_data.json
+json_token_count.json
+short_json_data.json
+DataLoader.pt
+DataLoader_old.pt
+DataLoaderActSelection.pt
+
+data/data_sample
+

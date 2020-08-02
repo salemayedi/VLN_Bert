@@ -48,14 +48,14 @@ class DataExtractor():
                                   for low_idx, action in enumerate(data["plan"]["low_actions"])
                                   if action["high_idx"] == i]
 
-                imgs[i] = [os.path.join(traj, "raw_images", img["image_name"])
+                imgs[i] = [os.path.join(traj, "raw_images", img["image_name"][:-4] + ".jpg")
                            for img in data["images"] if img["high_idx"] == i]
 
-                imgs_action[i] = [{"img": os.path.join(traj, "raw_images", img["image_name"]),
+                imgs_action[i] = [{"img": os.path.join(traj, "raw_images", img["image_name"][:-4] + ".jpg"),
                                    "action": traj_actions[img["low_idx"]]}
                                   for img in data["images"] if img["high_idx"] == i]
 
-                action_imgs[i] = [{"action": action["action"], "images": [os.path.join(traj, "raw_images", img["image_name"])
+                action_imgs[i] = [{"action": action["action"], "images": [os.path.join(traj, "raw_images", img["image_name"][:-4] + ".jpg")
                                                                           for img in data["images"]
                                                                           if img["high_idx"] == i and img["low_idx"] == action["low_idx"]]}
                                   for action in seq_actions[i]]
@@ -91,5 +91,5 @@ class DataExtractor():
 
 
 if __name__ == '__main__':
-    data_ext = DataExtractor("test_data")
+    data_ext = DataExtractor("data_sample/data")
     data_ext.build_json()

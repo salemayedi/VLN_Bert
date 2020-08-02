@@ -31,7 +31,7 @@ config = SimpleNamespace(
     adam_epsilon=1e-8,
     warmup_proportion=0.1,
     # feature extractor
-    threshold_similarity=0.7,
+    threshold_similarity=0.65,
     best_features=5,  # is n_boxes
     max_temporal_memory_buffer=3,  # the last pic is included, so you are basically only comparing to max_temporal_memory_buffer-1
     # track temporal features
@@ -39,9 +39,9 @@ config = SimpleNamespace(
     mean_layer=False,
                 # if true output feature extractor embedding [m * 2048];
                 # if False  output feature extractor embedding [ 2048];
-    num_key_frames=2,
+    num_key_frames=4,
     use_tensorboard=True,
     epochs=1000,
-    clip_size=3
+    clip_size=9
 
 )
