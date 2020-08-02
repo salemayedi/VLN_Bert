@@ -72,7 +72,7 @@ def split_train_val(data_loaded, split_portion=0.9):
 
 # load data
 frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-data_loader = DataLoader("data/json_data.json", frcnn_model, save_or_not=False)
+data_loader = DataLoader("data/json_data.json","data/json_token_count.json", frcnn_model, save_or_not=False)
 path = 'data/DataLoader.pt'
 data_loaded = data_loader.load_dataloader(path)
 print('data Loaded successfully !')
@@ -209,11 +209,11 @@ for epoch in range(args.epochs):
         [[epoch, loss_train_cum.item(), loss_val.item()]], columns=loss_result_csv.columns), ignore_index=True)
     if best_val > loss_val.item():
         best_val = loss_val.item()
-        torch.save(model.state_dict(), "save_vilbert_action_grounding/best_val_vilberActionGrounding.bin")
+        torch.save(model.state_dict(), "save/action_grounding/best_val.bin")
         print("Model saved best validation !")
     if best_train > loss_train_cum.item():
         best_train = loss_train_cum.item()
-        torch.save(model.state_dict(), "save_vilbert_action_grounding/best_train_vilberActionGrounding.bin")
+        torch.save(model.state_dict(), "save/action_grounding/best_train.bin")
         print("Model saved best Train !")
 
 writer.close()

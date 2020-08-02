@@ -41,7 +41,7 @@ config = SimpleNamespace(
                 # if False  output feature extractor embedding [ 2048];
     num_key_frames=2,
     use_tensorboard=True,
-    epochs=1000,
+    epochs=100,
     clip_size=3
 
 )

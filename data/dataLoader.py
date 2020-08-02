@@ -1,20 +1,9 @@
-from copy import deepcopy
-import logging
-import json
-import torch
-from types import SimpleNamespace
-from vilbert.vilbert import VILBertActionGrounding, BertConfig
-from pytorch_transformers.tokenization_bert import BertTokenizer
-from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
-import torch.distributed as dist
-from VLN_config import config as args
-import random
-import pandas as pd
-
 import sys
 import os
 import torch
 import yaml
+
+sys.path.insert(0, "/home/mikel/Desktop/Computer Science Master/LAB/Project/VLN_Bert")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,6 +21,18 @@ import torchvision.transforms as transforms
 from faster_rcnn import feature_extractor_new as f_extractor
 from faster_rcnn.feature_extractor_new import featureExtractor
 
+from copy import deepcopy
+import logging
+import json
+import torch
+from types import SimpleNamespace
+from vilbert.vilbert import VILBertActionGrounding, BertConfig
+from pytorch_transformers.tokenization_bert import BertTokenizer
+from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
+import torch.distributed as dist
+from VLN_config import config as args
+import random
+import pandas as pd
 
 tokenizer = BertTokenizer.from_pretrained(
     args.bert_model, do_lower_case=args.do_lower_case
@@ -353,8 +354,9 @@ class DataLoader():
 
 
 if __name__ == '__main__':
+    
     frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    data_loader = DataLoader("short_json_data.json", "json_token_count.json", frcnn_model, save_or_not=True)
+    data_loader = DataLoader("json_data.json", "json_token_count.json", frcnn_model, save_or_not=True)
 
     # to save DataLoader result
     data = data_loader.get_data_masked_train()

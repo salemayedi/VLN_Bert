@@ -463,5 +463,4 @@ if __name__ == '__main__':
     image_paths = [pic_2, pic3]
     f_extractor = featureExtractor(image_paths, model, 1)
     features, positional_encoding, infos = f_extractor.extract_features()
-    import pdb
-    pdb.set_trace()
+
