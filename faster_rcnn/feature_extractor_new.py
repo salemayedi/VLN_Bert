@@ -4,7 +4,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 from PIL import Image
-import config
+import config as coco_config
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,14 +37,14 @@ class featureExtractor ():
         infromation '''
         to_tensor = transforms.ToTensor()
         # img = Image.open(pic)
-        im = cv2.imread(image_path)  # Read image with cv2
-        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)  # Convert to RGB
+        self.original_im = cv2.imread(image_path)  # Read image with cv2
+        self.original_im = cv2.cvtColor(self.original_im, cv2.COLOR_BGR2RGB)  # Convert to RGB
         # t_img = to_tensor(img).float() # convert to tensor
-        im_shape = im.shape
+        im_shape = self.original_im.shape
         im_height = im_shape[0]
         im_width = im_shape[1]
 
-        img = to_tensor(im).float()  # convert to tensor
+        img = to_tensor(self.original_im).float()  # convert to tensor
         im_info = {"width": im_width, "height": im_height}
         return img, im_info
 
@@ -384,6 +384,9 @@ class featureExtractor ():
             self.im_infos.append(self.im_info)
             self.get_rpn_rois()
             self.get_selected_rois()
+            if config.visualize_images_boxes:
+                # if true you visualize all pictures in the sequence and their boxes
+                self.visualize_tensor()
             # the output here : self.embedding_rois, self.boxes_on_image, self.labels, self.scores
             # we add to the buffer the true last feature, without applying the mean or anytemporal transformation
             # if len(self.temporal_memory_buffer['features'])>1:
@@ -407,49 +410,49 @@ class featureExtractor ():
         return self.features_list, self.pos_enc_list, self.infos_list
 
 
-def visualize_tensor(t_img_list, boxes_on_image_tensor, labels_tensor, scores_tensor):
-    ''' visualize all the images in the t_img_list
-    t_img is one of the image tensors
-    '''
-    for im in range(len(t_img_list)):
-        t_img = t_img_list[im]
-        img = t_img.squeeze(0).permute(1, 2, 0) * 255
-        img = img.numpy().astype(np.uint8)
+    def visualize_tensor(self):
+        ''' visualize all the images in the t_img_list
+        t_img is one of the image tensors
+        Visualise an image tensor
+        '''
+        #img = self.im.permute(1, 2, 0) * 255
+        #img = img.numpy().astype(np.uint8)
+        img = self.original_im
         pred_class = []
-        coco = config.coco['coco_instance_category_name']
-
-        for i in list(labels_tensor[im].numpy()):
+        coco = coco_config.coco['coco_classes']
+        for i in list (self.labels[self.im_nb].numpy()):
             pred_class.append(coco[i])
-
         pred_boxes = [[(i[0], i[1]), (i[2], i[3])]
-                      for i in list(boxes_on_image_tensor[im].detach().numpy())]  # Bounding boxes
-        pred_score = list(scores_tensor[im].detach().numpy())
+                        for i in list(self.boxes_on_image[self.im_nb].detach().numpy().astype(int))]  # Bounding boxes
+        pred_score = list(self.scores[self.im_nb].detach().numpy())
 
-        # for i in range(len(pred_boxes)):
-        #    cv2.rectangle(img, pred_boxes[i][0], pred_boxes[i][1],color=(255, 0, 0), thickness=1) # Draw Rectangle with the coordinates
-        #    cv2.putText(img,pred_class[i], pred_boxes[i][0],  cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0),1, cv2.LINE_AA) # Write the prediction class
-        #    cv2.putText(img,str(round(pred_score[i], 2)), pred_boxes[i][1],  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),1, cv2.LINE_AA) # Write the prediction class
+        for i in range(len(pred_boxes)):
+            cv2.rectangle(img, pred_boxes[i][0], pred_boxes[i][1], color= (255, 0, 0), thickness= 2) # Draw Rectangle with the coordinates
+            cv2.putText(img,pred_class[i], (pred_boxes[i][0][0]+20, pred_boxes[i][0][1]+10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0),1, cv2.LINE_AA) # Write the prediction class
+            cv2.putText(img,str(round(pred_score[i], 2)), (pred_boxes[i][1][0]-40, pred_boxes[i][1][1]-10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0),1, cv2.LINE_AA) # Write the prediction score
 
-        print('labels: ', pred_class)
-        print('scores: ', pred_score)
+        
+
+        print('classes of the image: ', pred_class)
+        print('with these scores: ', self.scores[self.im_nb])
         plt.figure(figsize=(20, 30))  # display the output image
         plt.imshow(img)
         plt.xticks([])
         plt.yticks([])
         plt.show()
+        
+
+    def _chunks(self, array, chunk_size):
+        for i in range(0, len(array), chunk_size):
+            yield array[i: i + chunk_size]
 
 
-def _chunks(self, array, chunk_size):
-    for i in range(0, len(array), chunk_size):
-        yield array[i: i + chunk_size]
-
-
-def _save_feature(self, file_name, feature, info):
-    file_base_name = os.path.basename(file_name)
-    file_base_name = file_base_name.split(".")[0]
-    info["image_id"] = file_base_name
-    info["features"] = feature.cpu().numpy()
-    file_base_name = file_base_name + ".npy"
+    def _save_feature(self, file_name, feature, info):
+        file_base_name = os.path.basename(file_name)
+        file_base_name = file_base_name.split(".")[0]
+        info["image_id"] = file_base_name
+        info["features"] = feature.cpu().numpy()
+        file_base_name = file_base_name + ".npy"
 
 
 if __name__ == '__main__':
@@ -460,7 +463,7 @@ if __name__ == '__main__':
     pic1 = "test.png"
     pic_2 = "pickey.jpeg"
     pic3 = "problem.png"
-    image_paths = [pic_2, pic3]
+    image_paths = [ pic3, '5.png', '21.png', '25.png','27.png','29.png','30.png','34.png']
     f_extractor = featureExtractor(image_paths, model, 1)
     features, positional_encoding, infos = f_extractor.extract_features()
     import pdb
