@@ -135,11 +135,13 @@ best_train = 100000
 best_val = 1000000
 print("\n START !   \n")
 for epoch in range(args.epochs):
+    
     i = 0
     loss_train_cum = 0.
     acc_train = 0.
     num_batches = data_train[0].shape[0]//batch_size+1
     #import pdb; pdb.set_trace()
+    model.train()
     for i in range(num_batches):
         if (i == num_batches - 1):
             #print("last elements of the Batch!")
@@ -161,7 +163,6 @@ for epoch in range(args.epochs):
                                                  output_all_attention_masks=True)
             # Check the shapes in the criterion
             action_target_batch = action_targets_train[data_train[0].shape[0]-batch_size:].view(-1).cpu()
-            #print(action_target_batch.shape, pred_action_train.shape)
             loss_train = criterion(pred_action_train, action_target_batch)
         else:
             pred_action_train, att_train = model(input_ids=tokenized_text_train[i*batch_size:(i+1)*batch_size].cpu(),
@@ -178,18 +179,19 @@ for epoch in range(args.epochs):
                                                  output_all_attention_masks=True)
             # Check the shapes in the criterion
             action_target_batch = action_targets_train[i*batch_size:(i+1)*batch_size].view(-1).cpu()
-            #print(action_target_batch.shape, pred_action_train.shape)
-
             loss_train = criterion(pred_action_train, action_target_batch)
-            optimizer.zero_grad()
+
+        optimizer.zero_grad()
         loss_train.backward()
         loss_train_cum += loss_train
         acc_train += accuracy(action_target_batch.numpy(), torch.argmax(pred_action_train, dim=1).numpy())
         optimizer.step()
-    loss_train_cum = loss_train_cum/data_train[0].shape[0]
-    acc_train = acc_train/data_train[0].shape[0]
+
+    loss_train_cum = loss_train_cum/num_batches
+    acc_train = acc_train/num_batches
 
     # Validation
+    model.eval()
     pred_action_val, att_val = model(input_ids=tokenized_text_val.cpu(),
                                      image_feat=features_val.cpu(),  # Linear(2048*config.max_temporal_memory_buffer, 2048)
                                      image_loc=spatial_val.cpu(),  # Linear(in_features=5, out_features=1024, bias=True)
@@ -199,9 +201,9 @@ for epoch in range(args.epochs):
                                      image_attention_mask=image_mask_val.cpu(),
                                      output_all_attention_masks=True)
    
-    optimizer.zero_grad()
+    #optimizer.zero_grad()
     loss_val = criterion(pred_action_val, action_targets_val.view(-1).cpu())
-    loss_val = loss_val / data_val[0].shape[0]
+    loss_val = loss_val
     acc_val = accuracy(action_targets_val.numpy(), torch.argmax(pred_action_val, dim=1).numpy())
 
     print("epoch: ", epoch, "Train loss: ", loss_train_cum.item(), " Val loss: ", loss_val.item(), "Train acc: ", acc_train, "Val acc: ", acc_val)
@@ -213,12 +215,10 @@ for epoch in range(args.epochs):
         writer.add_scalar('Accuracy/validation', acc_val, epoch)
     #loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)
     if best_val > loss_val.item():
-        pass
         best_val = loss_val.item()
         torch.save(model.state_dict(), "save/action_selection/best_val.bin")
         print("Model saved best validation !")
     if best_train > loss_train_cum.item():
-        pass
         best_train = loss_train_cum.item()
         torch.save(model.state_dict(), "save/action_selection/best_train.bin")
         print("Model saved best Train !")
