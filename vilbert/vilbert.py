@@ -1583,7 +1583,7 @@ class VILBertActionSelection(BertPreTrainedModel):
             if self.mean_layer:
                 image_feat = self.img_emb_mean(image_feat)
         image_feat = image_feat + self.positional_enc(image_pos_input)
-        print("Image features after adding pos enc ->", image_feat.shape)
+        # print("Image features after adding pos enc ->", image_feat.shape)
         _, _, pooled_output_t, pooled_output_v, all_attention_mask = self.bert(
             input_ids,
             image_feat,
