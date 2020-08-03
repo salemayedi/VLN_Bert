@@ -194,10 +194,10 @@ for epoch in range(args.epochs):
         loss_train.backward()
         loss_train_cum += loss_train
         acc_train += accuracy(action_target_batch.numpy(),
-                              torch.argmax(pred_action_train, dim=1).numpy(), normalize=False)
+                              torch.argmax(pred_action_train, dim=1).numpy())
         optimizer.step()
-    loss_train_cum = loss_train_cum/data_train[0].shape[0]
-    acc_train = float(acc_train)/data_train[0].shape[0]
+    loss_train_cum = loss_train_cum/num_batches
+    acc_train = acc_train/num_batches
 
     # Validation
     model.eval()
@@ -212,7 +212,7 @@ for epoch in range(args.epochs):
 
     # optimizer.zero_grad()
     loss_val = criterion(pred_action_val, action_targets_val.view(-1).cuda())
-    loss_val = loss_val / data_val[0].shape[0]
+    loss_val = loss_val
     acc_val = accuracy(action_targets_val.numpy(), torch.argmax(pred_action_val, dim=1).numpy())
 
     print("epoch: ", epoch, "Train loss: ", loss_train_cum.item(), " Val loss: ",
