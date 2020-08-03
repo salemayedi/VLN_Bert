@@ -12,6 +12,7 @@ import random
 import pandas as pd
 from data.dataLoaderActSelection import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from sklearn.metrics import accuracy_score as accuracy
 
 import sys
 import os
@@ -115,7 +116,7 @@ print('Vilbert Loaded successfully !')
 
 # Set the model for training
 print("Exist Cuda: ", torch.cuda.is_available())
-print(torch.cuda.get_device_name())
+print("Name of Cuda Device: ", torch.cuda.get_device_name())
 model.cpu()
 model.train()
 # Change adamW for action selection
@@ -124,6 +125,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 #                   lr=args.learning_rate,
 #                   eps=args.adam_epsilon,
 #                   betas=(0.9, 0.98),)
+print("Optimizer : ", optimizer)
 criterion = CrossEntropyLoss()
 
 batch_size = args.train_batch_size
@@ -135,6 +137,7 @@ print("\n START !   \n")
 for epoch in range(args.epochs):
     i = 0
     loss_train_cum = 0.
+    acc_train = 0.
     num_batches = data_train[0].shape[0]//batch_size+1
     #import pdb; pdb.set_trace()
     for i in range(num_batches):
@@ -181,8 +184,11 @@ for epoch in range(args.epochs):
             optimizer.zero_grad()
         loss_train.backward()
         loss_train_cum += loss_train
+        acc_train += accuracy(action_target_batch.numpy(), torch.argmax(pred_action_train, dim=1).numpy())
         optimizer.step()
     loss_train_cum = loss_train_cum/data_train[0].shape[0]
+    acc_train = acc_train/data_train[0].shape[0]
+
     # Validation
     pred_action_val, att_val = model(input_ids=tokenized_text_val.cpu(),
                                      image_feat=features_val.cpu(),  # Linear(2048*config.max_temporal_memory_buffer, 2048)
@@ -192,23 +198,29 @@ for epoch in range(args.epochs):
                                      attention_mask=input_mask_val.cpu(),
                                      image_attention_mask=image_mask_val.cpu(),
                                      output_all_attention_masks=True)
-    #import pdb; pdb.set_trace()
+   
     optimizer.zero_grad()
     loss_val = criterion(pred_action_val, action_targets_val.view(-1).cpu())
     loss_val = loss_val / data_val[0].shape[0]
-    print("epoch: ", epoch, "Train loss: ", loss_train_cum.item(), " Val loss: ", loss_val.item())
+    acc_val = accuracy(action_targets_val.numpy(), torch.argmax(pred_action_val, dim=1).numpy())
+
+    print("epoch: ", epoch, "Train loss: ", loss_train_cum.item(), " Val loss: ", loss_val.item(), "Train acc: ", acc_train, "Val acc: ", acc_val)
     if args.use_tensorboard:
         # Plot separately the losses img and lm
-        writer.add_scalar('Loss/train', loss_train_cum, epoch)
-        writer.add_scalar('Loss/validation', loss_val, epoch)
+        writer.add_scalar('Loss/train', loss_train_cum.item(), epoch)
+        writer.add_scalar('Loss/validation', loss_val.item(), epoch)
+        writer.add_scalar('Accuracy/train', acc_train, epoch)
+        writer.add_scalar('Accuracy/validation', acc_val, epoch)
     #loss_result_csv = loss_result_csv.append(pd.DataFrame([[epoch, loss_train_cum.item(), loss_val.item()]], columns = loss_result_csv.columns ), ignore_index = True)
     if best_val > loss_val.item():
+        pass
         best_val = loss_val.item()
-        torch.save(model.state_dict(), "save_vilbert_action_selection/best_val_vilberActionSelection.bin")
+        torch.save(model.state_dict(), "save/action_selection/best_val.bin")
         print("Model saved best validation !")
     if best_train > loss_train_cum.item():
+        pass
         best_train = loss_train_cum.item()
-        torch.save(model.state_dict(), "save_vilbert_action_selection/best_train_vilberActionSelection.bin")
+        torch.save(model.state_dict(), "save/action_selection/best_train.bin")
         print("Model saved best Train !")
 
 writer.close()
