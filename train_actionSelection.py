@@ -44,6 +44,7 @@ def split_train_val(data_loaded, split_portion=0.84):
     features, pos_enc, spatial, image_mask, tokenized_text, input_mask, segment_ids, co_attention_mask, infos, action_targets = data_loaded
 
     indexes = list(range(features.shape[0]))
+    print("We have %d data points" % (len(indexes)))
     random.shuffle(indexes)
     split_train = int(features.shape[0] * split_portion)
     indexes_train = indexes[:split_train]
@@ -193,8 +194,8 @@ for epoch in range(args.epochs):
         optimizer.zero_grad()
         loss_train.backward()
         loss_train_cum += loss_train
-        acc_train += accuracy(action_target_batch.numpy(),
-                              torch.argmax(pred_action_train, dim=1).numpy())
+        acc_train += accuracy(action_target_batch.cpu().numpy(),
+                              torch.argmax(pred_action_train, dim=1).cpu().numpy())
         optimizer.step()
     loss_train_cum = loss_train_cum/num_batches
     acc_train = acc_train/num_batches
@@ -213,7 +214,7 @@ for epoch in range(args.epochs):
     # optimizer.zero_grad()
     loss_val = criterion(pred_action_val, action_targets_val.view(-1).cuda())
     loss_val = loss_val
-    acc_val = accuracy(action_targets_val.numpy(), torch.argmax(pred_action_val, dim=1).numpy())
+    acc_val = accuracy(action_targets_val.cpu().numpy(), torch.argmax(pred_action_val, dim=1).cpu().numpy())
 
     print("epoch: ", epoch, "Train loss: ", loss_train_cum.item(), " Val loss: ",
           loss_val.item(), "Train acc: ", acc_train, "Val acc: ", acc_val)
