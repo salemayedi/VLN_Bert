@@ -12,7 +12,7 @@ from VLN_config import config as args
 from torch.nn import CrossEntropyLoss
 import random
 import pandas as pd
-from data.dataLoaderActSelection import DataLoader
+from data.dataLoaderActSelction import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import accuracy_score as accuracy
 
