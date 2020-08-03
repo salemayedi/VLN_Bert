@@ -9,8 +9,6 @@ import torch.distributed as dist
 from VLN_config import config as args
 import random
 import pandas as pd
-
-
 import sys
 import os
 import torch
@@ -51,7 +49,7 @@ class DataLoader():
                 respectively. """
 
     def __init__(self, json_path, model, save_or_not=False):
-        self.data = json.load(open(json_path, "r"))
+        self.data = json.load(open(json_path, "r"))[:120]
         self.tokenized_data = []
         self.model = model
         self.save_or_not = save_or_not
@@ -71,9 +69,6 @@ class DataLoader():
         return features, positional_encoding, infos
 
     def flatten_to_one_img(self, features, positional_encoding, infos):
-        """
-
-        """
         features = torch.cat(features, dim=0)
         positional_encoding = torch.cat(positional_encoding, dim=0)
         infos_bbox = np.concatenate([infos[i]["bbox"] for i in range(len(infos))], axis=0)
@@ -161,7 +156,6 @@ class DataLoader():
         print("Tokenizing text...")
         for i, _ in enumerate(self.tokenized_data):
             text = self.data[self.tokenized_data[i]["seq_id"]]["desc"][0]
-            print("TEXT %i ---->  %s" % (i, text))
             text = '[CLS]' + text + '[SEP]'
             tokenized_text = tokenizer.tokenize(text)
             tokenized_text = tokenizer.convert_tokens_to_ids(tokenized_text)
@@ -277,8 +271,6 @@ class DataLoader():
             segment_ids.append(data[i]["desc"]["segment_ids"].unsqueeze(0))
             co_attention_mask.append(data[i]["imgs"]["co_attention_mask"].unsqueeze(0))
             infos.append(data[i]["imgs"]["infos"]),
-            # import pdb
-            # pdb.set_trace()
             action_targets.append(torch.tensor(data[i]["next_action"]).unsqueeze(0))
         features = torch.cat(features, dim=0)
         pos_enc = torch.cat(pos_enc, dim=0)
@@ -303,9 +295,8 @@ class DataLoader():
         self.img_tokenizer()
         self.text_tokenizer()
         data = self.get_processed_data()
-        for instruction, data_point in enumerate(data):
+        for _, data_point in enumerate(data):
             for type_data_key, type_data_value in data_point.items():  # Here IMGS or DESC or action
-                # print(type_data_key, type_data_value)
                 if isinstance(type_data_value, dict):
                     for key, value in type_data_value.items():
                         if type_data_key == "imgs":
@@ -330,13 +321,11 @@ class DataLoader():
         final_tensor_data = self.build_batch(data)
         if self.save_or_not == True:
             self.save_dataloader(final_tensor_data)
-        import pdb
-        pdb.set_trace()
         return final_tensor_data
 
 
 if __name__ == '__main__':
     frcnn_model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    data_loader = DataLoader("short_json_data.json", frcnn_model, save_or_not=False)
-    # to save DataLoader result
+    data_loader = DataLoader("json_data.json", frcnn_model, save_or_not=True)
+    # To save DataLoader result
     data = data_loader.get_data_masked_train()

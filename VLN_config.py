@@ -39,7 +39,7 @@ config = SimpleNamespace(
     mean_layer=False,
                 # if true output feature extractor embedding [m * 2048];
                 # if False  output feature extractor embedding [ 2048];
-    num_key_frames=4,
+    num_key_frames=3,
     use_tensorboard=True,
     epochs=1000,
     clip_size=9
