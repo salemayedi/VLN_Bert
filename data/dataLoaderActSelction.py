@@ -97,7 +97,7 @@ class DataLoader():
             frames_per_clip = args.clip_size
             num_clips = np.ceil(len_seq/frames_per_clip).astype(int)
             for c in range(num_clips):
-                if c < (args.num_clips-1):
+                if c < (num_clips-1):
                     print("Clip from %d -> %d with %d" % (c*frames_per_clip, (c+1)*frames_per_clip, frames_per_clip))
                     clip = one_action_data["imgs"][c*frames_per_clip:(c+1)*frames_per_clip]
                 else:
@@ -140,7 +140,7 @@ class DataLoader():
                 # Flatten to one img so that, we have r_0..r_k*nboxes as if it was one image
                 # To be applied for the 3 lists above
                 features, positional_encoding, infos = self.flatten_to_one_img(features, positional_encoding, infos)
-                if c == args.num_clips-1:
+                if c == num_clips-1:
                     action = one_action_data["img_action"][-1]["action"]
                 else:
                     action = one_action_data["img_action"][(c+1)*frames_per_clip]["action"]
